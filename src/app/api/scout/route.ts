@@ -29,14 +29,22 @@ function loadData() {
 
 import { detectProvinceFromText, THAI_PROVINCES, getProvincesInRegion } from "@/data/provinces";
 
+const STOP_WORDS = new Set([
+  "อยาก", "อยากได้", "ต้องการ", "ฉาก", "ถ่าย", "ซีน", "ที่", "มี", "ขอ", "แบบ",
+  "และ", "กับ", "หรือ", "ใน", "ไป", "มา", "ของ", "ให้", "เอา", "แนว", "สไตล์",
+  "โทน", "มู้ด", "อารมณ์", "ช่วง", "ตอน", "สวย", "สวยๆ", "ดี", "วิว"
+]);
+
 export async function POST(req: Request) {
   try {
     const { brief, province, category, limit } = await req.json();
     const data = loadData();
 
     const briefLower = (brief || "").toLowerCase().trim();
-    const queryTokens = briefLower.split(/\s+/).filter((t: string) => t.length > 1);
-    const isBriefEmpty = queryTokens.length === 0;
+    const queryTokens = briefLower.split(/[\s,()]+/).filter((t: string) => t.length > 1);
+    const meaningfulUserTokens = queryTokens.filter((t: string) => !STOP_WORDS.has(t));
+    const activeTokens = meaningfulUserTokens.length > 0 ? meaningfulUserTokens : queryTokens;
+    const isBriefEmpty = activeTokens.length === 0;
 
     // Region vs Province resolution
     const isRegionFilter = province && province.startsWith("region:");
@@ -60,7 +68,7 @@ export async function POST(req: Request) {
         if (geminiAnalysis?.expandedKeywords && Array.isArray(geminiAnalysis.expandedKeywords)) {
           for (const kw of geminiAnalysis.expandedKeywords) {
             const clean = (kw || "").toLowerCase().replace(/[\(\)\[\],.]/g, " ").trim();
-            const words = clean.split(/\s+/).filter((w: string) => w.length > 1);
+            const words = clean.split(/\s+/).filter((w: string) => w.length > 1 && !STOP_WORDS.has(w));
             expandedTokens.push(...words);
           }
         }
@@ -77,23 +85,22 @@ export async function POST(req: Request) {
         score = 40;
       }
 
-      // 1. Region Filter (เลือกภาคเฉยๆ ก็ได้)
+      // 1. Region Filter
       if (isRegionFilter && regionProvinces) {
         if (!regionProvinces.includes(item.province)) {
           return { item, score: -100 };
         }
         score += 35;
       }
-      // 2. Specific Province Filter (เลือกจังหวัดเฉยๆ ก็ได้)
+      // 2. Specific Province Filter
       else if (effectiveProvince) {
         if (!item.province.includes(effectiveProvince)) {
           return { item, score: -100 };
         }
         score += 40;
       } else if (detected.detectedProvince) {
-        // If province wasn't hard-filtered, but user typed province in the brief
         if (item.province.includes(detected.detectedProvince)) {
-          score += 50; // Big boost for matching detected province
+          score += 50;
         }
       }
 
@@ -105,61 +112,48 @@ export async function POST(req: Request) {
         score += 15;
       }
 
-      // 4. Keyword Scoring (when brief is provided)
-      let tokenHits = 0;
-      let keywordScore = 0;
-
+      // 4. Strict Keyword Scoring (when brief is provided)
       if (!isBriefEmpty) {
-        for (const token of queryTokens) {
+        let userHits = 0;
+        let keywordScore = 0;
+
+        for (const token of activeTokens) {
           let hit = false;
-          if (item.name_th.toLowerCase().includes(token)) { keywordScore += 40; hit = true; }
-          if (item.hilight && item.hilight.toLowerCase().includes(token)) { keywordScore += 25; hit = true; }
-          if (item.sub_type && item.sub_type.toLowerCase().includes(token)) { keywordScore += 20; hit = true; }
-          if (item.detail && item.detail.toLowerCase().includes(token)) { keywordScore += 15; hit = true; }
-          if (item.category && item.category.toLowerCase().includes(token)) { keywordScore += 10; hit = true; }
-          if (item.province && item.province.toLowerCase().includes(token)) { keywordScore += 25; hit = true; }
-          if (hit) tokenHits++;
+          if (item.name_th.toLowerCase().includes(token)) { keywordScore += 80; hit = true; }
+          if (item.hilight && item.hilight.toLowerCase().includes(token)) { keywordScore += 45; hit = true; }
+          if (item.sub_type && item.sub_type.toLowerCase().includes(token)) { keywordScore += 35; hit = true; }
+          if (item.detail && item.detail.toLowerCase().includes(token)) { keywordScore += 30; hit = true; }
+          if (item.category && item.category.toLowerCase().includes(token)) { keywordScore += 25; hit = true; }
+          if (item.province && item.province.toLowerCase().includes(token)) { keywordScore += 40; hit = true; }
+          if (hit) userHits++;
         }
 
-        if (detected.matchedAlias && (item.name_th.includes(detected.matchedAlias) || (item.detail && item.detail.includes(detected.matchedAlias)))) {
-          keywordScore += 30;
-          tokenHits++;
+        // Exact phrase match
+        if (briefLower.length >= 4 && (item.name_th.toLowerCase().includes(briefLower) || (item.detail && item.detail.toLowerCase().includes(briefLower)))) {
+          keywordScore += 60;
+          userHits++;
         }
 
-        // Gemini AI Expanded Semantic Concept Matches
-        for (const token of expandedTokens) {
-          let hit = false;
-          if (item.name_th.toLowerCase().includes(token)) { keywordScore += 45; hit = true; }
-          if (item.hilight && item.hilight.toLowerCase().includes(token)) { keywordScore += 30; hit = true; }
-          if (item.sub_type && item.sub_type.toLowerCase().includes(token)) { keywordScore += 25; hit = true; }
-          if (item.detail && item.detail.toLowerCase().includes(token)) { keywordScore += 20; hit = true; }
-          if (hit) tokenHits++;
-        }
-
-        // Strict filter: If user provided search brief, item MUST have at least 1 keyword hit
-        if (tokenHits === 0) {
+        // STRICT RULE: If NO user tokens matched at all -> STRICT NO MATCH (Score 0)
+        // If the TAT dataset doesn't have it, we honestly return 0 without forcing!
+        if (userHits === 0) {
           return { item, score: 0 };
         }
 
-        // Multi-token match synergy (items matching 2+ words get huge boost)
-        if (tokenHits > 1) {
-          keywordScore += tokenHits * 80;
+        // Multi-keyword synergy (matching 2+ query words gives significant boost)
+        if (userHits > 1) {
+          keywordScore += userHits * 50;
         }
 
-        // Sub-word mountain/nature boost if query relates to doi/mountain
-        if (queryTokens.some((t: string) => t.includes("ดอย") || t.includes("ภู") || t.includes("เขา"))) {
-          if (item.name_th.includes("ดอย") || item.name_th.includes("ภู") || item.name_th.includes("เขา")) {
-            keywordScore += 40;
-          }
+        // Gemini AI Expanded Semantic Bonus (ONLY as a bonus to items that already matched user query)
+        let semanticBonus = 0;
+        for (const token of expandedTokens) {
+          if (activeTokens.includes(token)) continue;
+          if (item.name_th.toLowerCase().includes(token)) semanticBonus += 25;
+          else if (item.hilight && item.hilight.toLowerCase().includes(token)) semanticBonus += 15;
+          else if (item.detail && item.detail.toLowerCase().includes(token)) semanticBonus += 10;
         }
-
-        // Penalty for indoor museums / municipal buildings when user didn't ask for museums
-        if (
-          item.name_th.includes("พิพิธภัณฑ์") &&
-          !queryTokens.some((t: string) => t.includes("พิพิธภัณฑ์"))
-        ) {
-          keywordScore -= 60;
-        }
+        keywordScore += Math.min(semanticBonus, 60);
 
         score += keywordScore;
       }
