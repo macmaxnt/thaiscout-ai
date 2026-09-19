@@ -8,7 +8,7 @@ export async function callGemini(prompt: string, jsonMode: boolean = false): Pro
     return null;
   }
 
-  const models = ["gemini-2.5-flash-lite", "gemini-2.5-flash"];
+  const models = ["gemini-3.5-flash-lite", "gemini-2.5-flash-lite", "gemini-2.5-flash"];
 
   for (const model of models) {
     try {

@@ -546,7 +546,7 @@ export default function Home() {
                   <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-600 text-white font-black text-xs shadow-sm">
                     ✨
                   </span>
-                  <span className="font-black text-sm text-indigo-950">Gemini 2.5 Creative Scouting Agent</span>
+                  <span className="font-black text-sm text-indigo-950">Gemini 3.5 Flash Lite Creative Scouting Agent</span>
                   <span className="text-[10px] uppercase font-mono tracking-wider font-extrabold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full border border-indigo-200">
                     AI Deconstructed
                   </span>

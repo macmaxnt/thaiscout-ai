@@ -42,7 +42,7 @@ export async function POST(req: Request) {
 
       if (geminiAnswer) {
         answer = geminiAnswer;
-        confidence = "Very High (Gemini 2.5 Grounded on TAT Corpus + Statutory Framework)";
+        confidence = "Very High (Gemini 3.5 Flash Lite Grounded on TAT Corpus + Statutory Framework)";
       } else if (q.includes("โดรน") || q.includes("drone") || q.includes("บิน")) {
         answer = `【ระเบียบการบินโดรนสำหรับ ${name_th}】\n` +
           `• หน่วยงานกำกับดูแล: ${statutoryAuthority}\n` +
