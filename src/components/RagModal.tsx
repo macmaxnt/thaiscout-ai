@@ -10,9 +10,17 @@ interface RagModalProps {
   location: any;
   brief: string;
   onClose: () => void;
+  isPinned?: boolean;
+  onToggleScout?: (loc: any) => void;
 }
 
-export default function RagModal({ location, brief, onClose }: RagModalProps) {
+export default function RagModal({
+  location,
+  brief,
+  onClose,
+  isPinned = false,
+  onToggleScout,
+}: RagModalProps) {
   const [loading, setLoading] = useState(true);
   const [dossier, setDossier] = useState<any>(null);
   const [question, setQuestion] = useState("");
@@ -97,12 +105,28 @@ export default function RagModal({ location, brief, onClose }: RagModalProps) {
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="btn btn-purple p-2 rounded-xl text-xs font-black cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {onToggleScout && (
+              <button
+                type="button"
+                onClick={() => onToggleScout(location)}
+                className={`btn px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition cursor-pointer ${
+                  isPinned
+                    ? "bg-[#ffe4e6] border-2 border-[#e11d48] text-[#9f1239] shadow-[2px_2px_0px_#be123c]"
+                    : "btn-mint shadow-[2px_2px_0px_#15803d]"
+                }`}
+              >
+                {isPinned ? "✕ ปลดหมุด" : "📌 + ปักหมุด"}
+              </button>
+            )}
+
+            <button
+              onClick={onClose}
+              className="btn btn-purple p-2 rounded-xl text-xs font-black cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Modal Body */}

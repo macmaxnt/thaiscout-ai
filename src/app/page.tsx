@@ -745,6 +745,7 @@ export default function Home() {
                 setFilterOnlyPinned(!filterOnlyPinned);
               }
             }}
+            onOpenRag={(loc) => setRagTargetLocation(loc)}
           />
         </div>
 
@@ -756,6 +757,8 @@ export default function Home() {
         <RagModal
           location={ragTargetLocation}
           brief={brief}
+          isPinned={scoutingList.some((x) => x.id === ragTargetLocation.id)}
+          onToggleScout={toggleScout}
           onClose={() => setRagTargetLocation(null)}
         />
       )}

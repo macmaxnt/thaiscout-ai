@@ -27,6 +27,7 @@ interface InteractiveMapProps {
   onClearScout?: () => void;
   filterOnlyPinned?: boolean;
   onToggleFilterOnlyPinned?: () => void;
+  onOpenRag?: (loc: MapLocation) => void;
 }
 
 function calculateTotalDistance(locs: MapLocation[]): number {
@@ -60,11 +61,13 @@ export default function InteractiveMap({
   onClearScout,
   filterOnlyPinned = false,
   onToggleFilterOnlyPinned,
+  onOpenRag,
 }: InteractiveMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const routePolylineRef = useRef<L.Polyline | null>(null);
+  const prevSelectedIdRef = useRef<string | null>(null);
 
   const onDeselectRef = useRef(onDeselect);
   useEffect(() => {
@@ -223,24 +226,107 @@ export default function InteractiveMap({
         }
       );
 
-      // Popup Content: Structured cleanly above the pin
+      // Popup Content: Structured cleanly above the pin with interactive buttons
       const popupDiv = document.createElement("div");
-      popupDiv.style.minWidth = "200px";
+      popupDiv.style.minWidth = "220px";
+      popupDiv.style.maxWidth = "280px";
       popupDiv.style.fontFamily = "'Nunito', 'Mitr', sans-serif";
+
+      const isPinned = scoutingList.some((x) => x.id === loc.id);
+      const districtLabel = loc.district
+        ? `• ${loc.province === "กรุงเทพมหานคร" ? "เขต" : "อ."}${loc.district.replace(/^(อ\.|เขต)/, "")}`
+        : "";
+
       popupDiv.innerHTML = `
         <div style="padding: 2px;">
-          <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-bottom: 2px; line-height: 1.2;">
+          <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-bottom: 2px; line-height: 1.25;">
             ${loc.name_th}
           </div>
           <div style="font-size: 11px; font-weight: 700; color: #475569; margin-bottom: 4px;">
-            📍 ${loc.province} ${loc.district ? "• อ." + loc.district : ""}
+            📍 ${loc.province} ${districtLabel}
           </div>
-          ${loc.tel ? `<div style="font-size: 11px; font-weight: 800; color: #d97706; margin-bottom: 6px;">📞 ${loc.tel}</div>` : ""}
-          <div style="font-size: 10px; font-family: monospace; color: #0284c7; font-weight: 700;">
+          ${loc.tel ? `<div style="font-size: 11px; font-weight: 800; color: #d97706; margin-bottom: 4px;">📞 ${loc.tel}</div>` : ""}
+          <div style="font-size: 10px; font-family: monospace; color: #0284c7; font-weight: 700; margin-bottom: 8px;">
             GPS: ${lat.toFixed(4)}, ${lng.toFixed(4)}
+          </div>
+          <div style="padding-top: 8px; border-top: 1px solid #e2e8f0; display: flex; gap: 6px; align-items: center;">
+            <button
+              id="map-popup-pin-${loc.id}"
+              type="button"
+              style="
+                flex: 1;
+                padding: 6px 10px;
+                border-radius: 10px;
+                font-size: 11px;
+                font-weight: 900;
+                cursor: pointer;
+                border: 2px solid ${isPinned ? '#e11d48' : '#16a34a'};
+                background-color: ${isPinned ? '#ffe4e6' : '#bbf7d0'};
+                color: ${isPinned ? '#9f1239' : '#14532d'};
+                box-shadow: 2px 2px 0px ${isPinned ? '#be123c' : '#15803d'};
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 4px;
+                font-family: inherit;
+                transition: all 0.1s ease;
+              "
+            >
+              ${isPinned ? "✕ ปลดหมุด" : "📌 + ปักหมุด"}
+            </button>
+            ${
+              onOpenRag
+                ? `
+              <button
+                id="map-popup-rag-${loc.id}"
+                type="button"
+                style="
+                  padding: 6px 10px;
+                  border-radius: 10px;
+                  font-size: 11px;
+                  font-weight: 900;
+                  cursor: pointer;
+                  border: 2px solid #7c3aed;
+                  background-color: #f5f3ff;
+                  color: #6d28d9;
+                  box-shadow: 2px 2px 0px #7c3aed;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  gap: 3px;
+                  font-family: inherit;
+                  white-space: nowrap;
+                  transition: all 0.1s ease;
+                "
+              >
+                ✨ AI RAG
+              </button>
+            `
+                : ""
+            }
           </div>
         </div>
       `;
+
+      // Attach button click events
+      const pinBtn = popupDiv.querySelector(`#map-popup-pin-${loc.id}`);
+      if (pinBtn) {
+        pinBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          onSelectLocation(loc);
+          onToggleScout(loc);
+        });
+      }
+
+      const ragBtn = popupDiv.querySelector(`#map-popup-rag-${loc.id}`);
+      if (ragBtn && onOpenRag) {
+        ragBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          onOpenRag(loc);
+        });
+      }
 
       marker.bindPopup(popupDiv);
 
@@ -255,17 +341,21 @@ export default function InteractiveMap({
       }
     });
 
-    if (selectedLocation?.lat && selectedLocation?.lng) {
+    const prevSelectedId = prevSelectedIdRef.current;
+    const isNewSelection = selectedLocation && selectedLocation.id !== prevSelectedId;
+    prevSelectedIdRef.current = selectedLocation?.id || null;
+
+    if (isNewSelection && selectedLocation?.lat && selectedLocation?.lng) {
       map.flyTo([selectedLocation.lat, selectedLocation.lng], 14, {
         duration: 0.8,
       });
-    } else if (bounds.length > 0) {
+    } else if (!selectedLocation && prevSelectedId !== null && bounds.length > 0) {
       map.closePopup();
       map.fitBounds(bounds, { padding: [40, 40], maxZoom: 13 });
-    } else {
+    } else if (!selectedLocation) {
       map.closePopup();
     }
-  }, [locations, selectedLocation, scoutingList, filterOnlyPinned]);
+  }, [locations, selectedLocation, scoutingList, filterOnlyPinned, onOpenRag]);
 
   const handleFitAll = () => {
     const map = mapInstanceRef.current;
