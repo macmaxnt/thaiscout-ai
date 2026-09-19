@@ -117,17 +117,10 @@ export default function SocialReviewsModal({ location, onClose }: SocialReviewsM
                 <h3 className="text-base sm:text-lg font-black text-slate-900 leading-tight">
                   วิดีโอ & รีวิวสถานที่จริง (Verified In-App Recce)
                 </h3>
-                {isCustomHost ? (
-                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-[#bbf7d0] border border-[#16a34a] text-[#14532d] flex items-center gap-1">
-                    <HomeIcon className="w-3 h-3" />
-                    เจ้าของโดยตรง (Verified Host)
-                  </span>
-                ) : (
-                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-[#fcd9bd] border border-[#d67940] text-[#7c2d12] flex items-center gap-1">
-                    <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
-                    {data?.insights?.overallScore || "4.8"} / 5.0 Rating
-                  </span>
-                )}
+                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-[#fcd9bd] border border-[#d67940] text-[#7c2d12] flex items-center gap-1">
+                  <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
+                  {data?.insights?.overallScore || "4.8"} / 5.0 Rating
+                </span>
               </div>
               <p className="text-xs font-bold text-slate-600 mt-0.5">
                 เปิดดูคลิปจริง & บรรยากาศถ่ายทำ: <strong className="text-[#285185]">{name}</strong> ({prov})
@@ -207,53 +200,6 @@ export default function SocialReviewsModal({ location, onClose }: SocialReviewsM
               {/* TAB 1: IN-APP VIDEO PLAYER */}
               {activeTab === "video" && (
                 <div className="space-y-3.5">
-                  {/* Host Studio Custom Notice */}
-                  {isCustomHost && (
-                    <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-sky-50 border-2 border-[#16a34a] rounded-2xl p-4 shadow-[3px_3px_0px_#15803d]">
-                      <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xl">🏡</span>
-                          <div>
-                            <h4 className="font-black text-sm text-emerald-950">
-                              พื้นที่ส่วนบุคคล / สตูดิโอของเจ้าของพื้นที่โดยตรง
-                            </h4>
-                            <p className="text-xs text-emerald-800 font-medium">
-                              สถานที่นี้ลงทะเบียนโดยเจ้าของพื้นที่จริง พร้อมให้นัดหมายเข้าดูสถานที่และออกกองถ่ายทำ
-                            </p>
-                          </div>
-                        </div>
-                        {location.productionSpecs?.rate && (
-                          <span className="text-xs font-black px-2.5 py-1 rounded-xl bg-amber-100 text-amber-900 border border-amber-300 font-mono">
-                            💰 {location.productionSpecs.rate}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-bold text-slate-700 mt-3 pt-3 border-t border-emerald-200">
-                        {location.productionSpecs?.power && (
-                          <div className="flex items-center gap-1.5">
-                            <Zap className="w-4 h-4 text-amber-600 shrink-0" />
-                            <span><strong>ไฟ:</strong> {location.productionSpecs.power}</span>
-                          </div>
-                        )}
-                        {location.tel && (
-                          <div className="flex items-center gap-1.5">
-                            <Phone className="w-4 h-4 text-emerald-600 shrink-0" />
-                            <a href={`tel:${location.tel}`} className="text-emerald-800 hover:underline">
-                              โทร {location.tel}
-                            </a>
-                          </div>
-                        )}
-                        {location.productionSpecs?.parking && (
-                          <div className="flex items-center gap-1.5">
-                            <CheckCircle2 className="w-4 h-4 text-sky-600 shrink-0" />
-                            <span className="truncate"><strong>ที่จอด:</strong> {location.productionSpecs.parking}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
                   {/* Filter / Angle Chips & Search Bar */}
                   <div className="bg-slate-50 border-2 border-slate-200 p-3 rounded-2xl space-y-2.5">
                     <div className="flex items-center justify-between flex-wrap gap-2">

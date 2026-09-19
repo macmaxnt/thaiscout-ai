@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 
 import RagModal from "@/components/RagModal";
-import HostPortal from "@/components/HostPortal";
 import ProvinceSelector from "@/components/ProvinceSelector";
 import { detectProvinceFromText, getProvincesInRegion, REGION_LIST } from "@/data/provinces";
 
@@ -35,74 +34,12 @@ export default function Home() {
   const [mapPinSelectedId, setMapPinSelectedId] = useState<string | null>(null);
   const [filterOnlyPinned, setFilterOnlyPinned] = useState(false);
   const [ragTargetLocation, setRagTargetLocation] = useState<any | null>(null);
-  const [currentMode, setCurrentMode] = useState<"scout" | "host">("scout");
   const [activeTab, setActiveTab] = useState<"search" | "scout">("search");
   const [totalDbMatches, setTotalDbMatches] = useState<number>(8628);
   const [currentLimit, setCurrentLimit] = useState<number>(400);
   const [filterRegion, setFilterRegion] = useState<string>("ทั้งหมด");
   const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
   const [geminiAnalysis, setGeminiAnalysis] = useState<any>(null);
-  const [customLocations, setCustomLocations] = useState<any[]>([
-    {
-      id: "host_default_1",
-      name_th: "เรือนไทยริมน้ำ 100 ปี (เจ้าของโดยตรง)",
-      name_en: "Ancient Thai Waterfront House",
-      province: "พระนครศรีอยุธยา",
-      district: "พระนครศรีอยุธยา",
-      category: "บ้าน & เรือนไทย",
-      lat: 14.3532,
-      lng: 100.5684,
-      tel: "081-999-1234",
-      email: "contact@ayutthayavintage.com",
-      facebook: "facebook.com/AyutthayaVintageHouse",
-      hilight: "สถาปัตยกรรมไม้สักทองโบราณริมแม่น้ำเจ้าพระยา แสงเช้า-เย็นสะท้อนผิวน้ำสวยมาก",
-      detail: "เรือนไทยหมู่โบราณ ใต้ถุนโล่ง ลานกว้างริมน้ำ มีท่าเรือส่วนตัว เหมาะกับกองถ่ายละครพีเรียด ซีนดราม่า และมิวสิควิดีโอ พร้อมห้องแต่งตัวติดแอร์",
-      isCustomHost: true,
-      productionSpecs: {
-        rate: "18,000 บาท/คิว (12 ชม.)",
-        power: "ไฟบ้าน 30A พร้อมจุดต่อไฟ 3 เฟสริมน้ำ",
-        parking: "ลานดินกว้าง จอดรถตู้ 8 คัน รถปั่นไฟ 1 คัน",
-        dronePolicy: "อนุญาตบินโดรนถ่ายผิวน้ำและตัวเรือน",
-      },
-    },
-    {
-      id: "host_default_2",
-      name_th: "โกดังเก่าดิบสไตล์ Industrial (เจ้าของโดยตรง)",
-      name_en: "Raw Industrial Warehouse",
-      province: "สมุทรปราการ",
-      district: "พระประแดง",
-      category: "โกดัง & โรงงานเก่า",
-      lat: 13.6580,
-      lng: 100.5340,
-      tel: "089-888-5678",
-      email: "production@rawwarehouse-sp.com",
-      facebook: "facebook.com/RawWarehouseStudio",
-      hilight: "กำแพงอิฐเปลือย โครงสร้างเหล็กดิบ แสงส่องทะลุหน้าต่างกระจก เหมาะกับซีนแอ็กชัน",
-      detail: "โกดังริมแม่น้ำพื้นที่ 1,200 ตร.ม. โปร่ง ไร้เสากลาง รองรับการแขวนไฟ Rigging และมุมกล้อง Top View เหมาะกับโฆษณาและ MV แฟชั่น",
-      isCustomHost: true,
-      productionSpecs: {
-        rate: "22,000 บาท/คิว (12 ชม.)",
-        power: "ไฟฟ้าอุตสาหกรรม 100A รองรับไฟสตูดิโอขนาดใหญ่",
-        parking: "ลานคอนกรีต จอดรถเทรลเลอร์และรถกองถ่าย 20 คัน",
-        dronePolicy: "บินโดรนภายในโกดังเพดานสูง 10 เมตรได้",
-      },
-    },
-  ]);
-
-  const handleAddCustomLocation = (newLoc: any) => {
-    setCustomLocations((prev) => [newLoc, ...prev]);
-  };
-
-  const handleDeleteCustomLocation = (id: string) => {
-    setCustomLocations((prev) => prev.filter((x) => x.id !== id));
-  };
-
-  const handleViewCustomLocation = (loc: any) => {
-    setCurrentMode("scout");
-    setActiveTab("search");
-    setSelectedLocation(loc);
-    setMapPinSelectedId(loc.id);
-  };
 
   const toggleExpand = (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -207,30 +144,12 @@ export default function Home() {
     setMapPinSelectedId(loc.id);
   };
 
-  const matchingCustom = customLocations.filter((loc) => {
-    if (province !== "all") {
-      if (province.startsWith("region:")) {
-        const provsInRegion = getProvincesInRegion(province);
-        if (!provsInRegion.includes(loc.province)) return false;
-      } else if (loc.province !== province) {
-        return false;
-      }
-    }
-    if (brief.trim().length > 1) {
-      const tokens = brief.toLowerCase().split(/\s+/).filter((t: string) => t.length > 1);
-      if (tokens.length === 0) return true;
-      const fullText = `${loc.name_th} ${loc.category} ${loc.hilight || ""} ${loc.detail || ""} ${loc.province} ${loc.district || ""}`.toLowerCase();
-      return tokens.some((t: string) => fullText.includes(t));
-    }
-    return true;
-  });
-
   const cardsTopRef = useRef<HTMLDivElement>(null);
 
   const rawList = filterOnlyPinned
     ? scoutingList
     : activeTab === "search"
-    ? [...matchingCustom, ...results]
+    ? results
     : scoutingList;
 
   // Only float to index 0 when selected specifically from map pin
@@ -267,46 +186,17 @@ export default function Home() {
           </div>
         </div>
 
-        {/* 2-Sided Mode Switcher (สำหรับคนมาใช้ vs สำหรับเจ้าของเอางานมาลง) */}
-        <div className="bg-[#f0f5f8] border-2 border-[#ccd9e2] p-1 rounded-2xl flex items-center gap-1 shadow-[2px_2px_0px_#285185]">
-          <button
-            onClick={() => setCurrentMode("scout")}
-            className={`btn text-xs px-3.5 py-1.5 rounded-xl font-black transition ${
-              currentMode === "scout"
-                ? "bg-[#285185] text-white border-[#183354] shadow-[2px_2px_0px_#183354]"
-                : "bg-transparent border-transparent text-[#285185] hover:text-[#1b3558]"
-            }`}
-          >
-            🎬 โหมดกองถ่าย (Scout & Recce)
-          </button>
-
-          <button
-            onClick={() => setCurrentMode("host")}
-            className={`btn text-xs px-3.5 py-1.5 rounded-xl font-black transition flex items-center gap-1.5 ${
-              currentMode === "host"
-                ? "btn-mint shadow-[2px_2px_0px_#15803d]"
-                : "bg-transparent border-transparent text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            🏡 โหมดเจ้าของสถานที่ (Host Portal)
-            <span className="bg-emerald-600 text-white text-[10px] px-1.5 py-0.2 rounded-full">
-              {customLocations.length}
-            </span>
-          </button>
+        {/* Ground Truth TAT Badge */}
+        <div className="flex items-center gap-2">
+          <div className="bg-[#f0f5f8] border-2 border-[#ccd9e2] px-3.5 py-1.5 rounded-xl text-xs font-black text-[#1b3558] flex items-center gap-1.5 shadow-[2px_2px_0px_#285185]">
+            <span>🏛️ ฐานข้อมูล ททท. 8,628 พิกัด (Ground Truth 100%)</span>
+          </div>
         </div>
 
       </header>
 
-      {/* 🧭 2. Conditional Mode View: Host Portal vs Scout & Recce Board */}
-      {currentMode === "host" ? (
-        <HostPortal
-          customLocations={customLocations}
-          onAddLocation={handleAddCustomLocation}
-          onDeleteLocation={handleDeleteCustomLocation}
-          onViewLocation={handleViewCustomLocation}
-        />
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start w-full">
+      {/* Main Scout & Recce Board */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start w-full">
         
         {/* === LEFT COLUMN: Brief Console & Multi-Column Results Grid === */}
         <div className="lg:col-span-7 xl:col-span-7 2xl:col-span-8 flex flex-col gap-4">
@@ -486,7 +376,7 @@ export default function Home() {
                     ? "bg-white/30 text-white"
                     : "bg-slate-200 text-slate-800"
                 }`}>
-                  {[...matchingCustom, ...results].length}
+                  {results.length}
                 </span>
               </button>
 
@@ -639,22 +529,9 @@ export default function Home() {
                         {/* Top Badges */}
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          {loc.isCustomHost ? (
-                            <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-[#bbf7d0] text-[#14532d] border-[1.5px] border-[#16a34a] flex items-center gap-1">
-                              <HomeIcon className="w-3 h-3" />
-                              เจ้าของโดยตรง (Verified Host)
-                            </span>
-                          ) : (
-                            <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-[#ccd9e2] text-[#1b3558] border-[1.5px] border-[#285185]">
-                              {loc.category}
-                            </span>
-                          )}
-
-                          {loc.isCustomHost && loc.productionSpecs?.rate && (
-                            <span className="text-[10px] font-mono font-black px-2 py-0.5 rounded-md bg-[#fcd9bd] text-[#7c2d12] border border-[#d67940]">
-                              💰 {loc.productionSpecs.rate}
-                            </span>
-                          )}
+                          <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-[#ccd9e2] text-[#1b3558] border-[1.5px] border-[#285185]">
+                            {loc.category || "สถานที่ท่องเที่ยว"}
+                          </span>
 
                           {loc.relevanceScore && (
                             <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#fdf3eb] text-[#a8521d] border-[1.5px] border-[#d67940]">
@@ -707,12 +584,6 @@ export default function Home() {
                           <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                           <span className="font-semibold">GPS: {loc.lat ? `${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)}` : "ระบุในเขต"}</span>
                         </div>
-                        {loc.productionSpecs?.power && (
-                          <div className="flex items-center gap-1.5 text-[#0c4a6e]">
-                            <Zap className="w-4 h-4 text-amber-600 shrink-0" />
-                            <span className="line-clamp-1"><strong>ไฟกองถ่าย:</strong> {loc.productionSpecs.power}</span>
-                          </div>
-                        )}
                         {/* Phone */}
                         <div className="flex items-center gap-1.5">
                           <Phone className={`w-4 h-4 shrink-0 ${loc.tel ? "text-amber-600" : "text-slate-400"}`} />
@@ -759,43 +630,24 @@ export default function Home() {
                             <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
                           </svg>
                           <a
-                            href={
-                              loc.facebook?.startsWith("http")
-                                ? loc.facebook
-                                : loc.facebook
-                                ? `https://${loc.facebook}`
-                                : loc.productionSpecs?.facebook?.startsWith("http")
-                                ? loc.productionSpecs.facebook
-                                : loc.productionSpecs?.facebook
-                                ? `https://${loc.productionSpecs.facebook}`
-                                : `https://www.facebook.com/search/top?q=${encodeURIComponent(loc.name_th + ' ' + loc.province)}`
-                            }
+                            href={`https://www.facebook.com/search/top?q=${encodeURIComponent(loc.name_th + ' ' + loc.province)}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={(e) => e.stopPropagation()}
                             className="font-bold text-[#1877F2] hover:text-blue-900 hover:underline flex items-center gap-1 truncate"
-                            title="คลิกเพื่อเปิดเพจ Facebook ของสถานที่"
+                            title="ค้นหาเพจ Facebook ของสถานที่"
                           >
-                            <span>{loc.facebook || loc.productionSpecs?.facebook || `Facebook: เพจ ${loc.name_th} ↗`}</span>
+                            <span>Facebook: เพจ {loc.name_th} ↗</span>
                           </a>
                         </div>
 
-                        {/* Permit Caution / Host Verified Badge */}
-                        {loc.isCustomHost ? (
-                          <div className="bg-[#f0fdf4] border border-[#bbf7d0] p-2 rounded-xl text-xs text-[#14532d] font-bold flex items-start gap-1.5 mt-2">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                            <span className="line-clamp-2">
-                              <strong>สถานะ:</strong> เจ้าของเปิดพื้นที่พร้อมให้กองถ่ายเข้าสำรวจและถ่ายทำได้ทันที
-                            </span>
-                          </div>
-                        ) : (
-                          <div className="bg-[#fff1f2] border border-[#fecdd3] p-2 rounded-xl text-xs text-[#881337] font-semibold flex items-start gap-1.5 mt-2">
-                            <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                            <span className="line-clamp-2">
-                              <strong className="font-black text-rose-900">การขออนุญาต:</strong> ททท. ไม่ระบุระเบียบ โปรดติดต่อเบอร์ล่วงหน้า
-                            </span>
-                          </div>
-                        )}
+                        {/* Permit Caution Badge */}
+                        <div className="bg-[#fff1f2] border border-[#fecdd3] p-2 rounded-xl text-xs text-[#881337] font-semibold flex items-start gap-1.5 mt-2">
+                          <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                          <span className="line-clamp-2">
+                            <strong className="font-black text-rose-900">การขออนุญาต:</strong> ฐานข้อมูล ททท. ไม่ระบุระเบียบค่าธรรมเนียม โปรดโทรติดต่อเบอร์ทางการล่วงหน้า
+                          </span>
+                        </div>
                       </div>
                     </div>
 
@@ -885,7 +737,6 @@ export default function Home() {
         </div>
 
       </div>
-      )}
 
       {/* 🎙️ AI RAG Production Consultant Modal */}
       {ragTargetLocation && (

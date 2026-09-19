@@ -4,22 +4,18 @@ import https from "https";
 async function fetchRealYouTubeVideos(
   placeName: string,
   province: string,
-  angle?: string,
-  isCustomHost?: boolean
+  angle?: string
 ): Promise<any[]> {
   return new Promise((resolve) => {
     const timer = setTimeout(() => resolve([]), 4000);
 
-    // Clean up place name: remove brackets, "(เจ้าของโดยตรง)", etc.
     const cleanName = placeName
       .replace(/\(.*?\)/g, "")
       .replace(/\[.*?\]/g, "")
       .trim();
 
     let query = "";
-    if (isCustomHost) {
-      query = `สตูดิโอ ถ่ายทำ ${cleanName} โฆษณา MV`;
-    } else if (angle && angle.trim()) {
+    if (angle && angle.trim()) {
       query = `${cleanName} ${province} ${angle}`;
     } else {
       query = `${cleanName} ${province} เที่ยว รีวิว VLOG`;
@@ -125,7 +121,7 @@ export async function POST(req: Request) {
     const isUrban = prov.includes("กรุงเทพ") || cat.includes("ชุมชน") || cat.includes("ตลาด");
 
     // Fetch real-time YouTube videos matching the EXACT location name and province
-    const realVideos = await fetchRealYouTubeVideos(name, prov, angle, location.isCustomHost);
+    const realVideos = await fetchRealYouTubeVideos(name, prov, angle);
 
     // Fallback if no specific video returned
     const fallbackVideos = [
@@ -234,8 +230,6 @@ export async function POST(req: Request) {
       success: true,
       locationName: name,
       province: prov,
-      isCustomHost: !!location.isCustomHost,
-      productionSpecs: location.productionSpecs || null,
       socialLinks,
       sampleReviews,
       insights,
