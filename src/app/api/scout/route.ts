@@ -19,7 +19,7 @@ function loadData() {
   return cachedAttractions;
 }
 
-import { detectProvinceFromText, THAI_PROVINCES } from "@/data/provinces";
+import { detectProvinceFromText, THAI_PROVINCES, getProvincesInRegion } from "@/data/provinces";
 
 export async function POST(req: Request) {
   try {
@@ -27,25 +27,41 @@ export async function POST(req: Request) {
     const data = loadData();
 
     const briefLower = (brief || "").toLowerCase().trim();
-    
-    // Smart province detection from brief if province is not explicitly set or is "all"
-    const detected = detectProvinceFromText(briefLower);
-    const effectiveProvince =
-      province && province !== "all"
-        ? (detectProvinceFromText(province).detectedProvince || province)
-        : null;
-
     const queryTokens = briefLower.split(/\s+/).filter((t: string) => t.length > 1);
+    const isBriefEmpty = queryTokens.length === 0;
+
+    // Region vs Province resolution
+    const isRegionFilter = province && province.startsWith("region:");
+    const regionProvinces = isRegionFilter ? getProvincesInRegion(province) : null;
+    const isSpecificProvince = province && province !== "all" && !isRegionFilter;
+    const effectiveProvince = isSpecificProvince
+      ? (detectProvinceFromText(province).detectedProvince || province)
+      : null;
+
+    // Smart province detection from brief if province is not explicitly set
+    const detected = detectProvinceFromText(briefLower);
 
     const scored = data.map((item) => {
       let score = 0;
 
-      // 1. Explicit Province Filter
-      if (effectiveProvince) {
+      // Base score when browsing without a brief, ensuring nationwide items are included
+      if (isBriefEmpty) {
+        score = 40;
+      }
+
+      // 1. Region Filter (เลือกภาคเฉยๆ ก็ได้)
+      if (isRegionFilter && regionProvinces) {
+        if (!regionProvinces.includes(item.province)) {
+          return { item, score: -100 };
+        }
+        score += 35;
+      }
+      // 2. Specific Province Filter (เลือกจังหวัดเฉยๆ ก็ได้)
+      else if (effectiveProvince) {
         if (!item.province.includes(effectiveProvince)) {
           return { item, score: -100 };
         }
-        score += 30;
+        score += 40;
       } else if (detected.detectedProvince) {
         // If province wasn't hard-filtered, but user typed province in the brief
         if (item.province.includes(detected.detectedProvince)) {
@@ -53,7 +69,7 @@ export async function POST(req: Request) {
         }
       }
 
-      // 2. Category Filter
+      // 3. Category Filter
       if (category && category !== "all") {
         if (!item.category.includes(category)) {
           return { item, score: -100 };
@@ -61,7 +77,7 @@ export async function POST(req: Request) {
         score += 15;
       }
 
-      // 3. Keyword Scoring
+      // 4. Keyword Scoring (when brief is provided)
       for (const token of queryTokens) {
         if (item.name_th.toLowerCase().includes(token)) score += 30;
         if (item.hilight.toLowerCase().includes(token)) score += 20;
@@ -71,26 +87,32 @@ export async function POST(req: Request) {
         if (item.province.toLowerCase().includes(token)) score += 25;
       }
 
-      // 4. Boost for famous landmarks or district matches
+      // 5. Boost for famous landmarks or district matches
       if (detected.matchedAlias && (item.name_th.includes(detected.matchedAlias) || item.detail.includes(detected.matchedAlias))) {
         score += 25;
       }
 
-      if (item.lat && item.lng) score += 3;
-      if (item.tel) score += 2;
+      // Quality & Coordinate Boosts (places with GPS coordinates get pinned nicely)
+      if (item.lat && item.lng) score += 15;
+      if (item.tel) score += 5;
+      if (item.hilight && item.hilight.length > 5) score += 10;
 
       return { item, score };
     });
 
+    // Determine how many items to return:
+    // When browsing without brief or by region/province, give 80-120 items so the map is full of pins!
+    const maxResults = isBriefEmpty ? (effectiveProvince ? 120 : isRegionFilter ? 100 : 80) : 36;
+
     const results = scored
       .filter((s) => s.score > 0)
       .sort((a, b) => b.score - a.score)
-      .slice(0, 12)
+      .slice(0, maxResults)
       .map((s) => {
         const item = s.item;
         return {
           ...item,
-          relevanceScore: Math.min(Math.round(s.score * 2.5), 99),
+          relevanceScore: Math.min(Math.round(s.score * 2), 99),
           hasVerifiedCoords: !!(item.lat && item.lng),
           hasOperatingHours: !!item.time,
           hasDirectContact: !!item.tel,
