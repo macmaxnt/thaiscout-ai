@@ -32,6 +32,7 @@ export default function Home() {
   const [results, setResults] = useState<any[]>([]);
   const [scoutingList, setScoutingList] = useState<any[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<any | null>(null);
+  const [mapPinSelectedId, setMapPinSelectedId] = useState<string | null>(null);
   const [ragTargetLocation, setRagTargetLocation] = useState<any | null>(null);
   const [currentMode, setCurrentMode] = useState<"scout" | "host">("scout");
   const [activeTab, setActiveTab] = useState<"search" | "scout">("search");
@@ -99,6 +100,7 @@ export default function Home() {
     setCurrentMode("scout");
     setActiveTab("search");
     setSelectedLocation(loc);
+    setMapPinSelectedId(loc.id);
   };
 
   const toggleExpand = (id: string, e?: React.MouseEvent) => {
@@ -117,6 +119,7 @@ export default function Home() {
 
   const handleSearch = async (targetBrief = brief, targetProv = province) => {
     setLoading(true);
+    setMapPinSelectedId(null);
     // Auto-detect province if brief contains province name/alias
     let provToSend = targetProv;
     if (targetProv === "all") {
@@ -158,8 +161,15 @@ export default function Home() {
     }
   };
 
-  const handleSelect = (loc: any) => {
+  // Card click on the side: only highlights and centers on map, does NOT reorder list
+  const handleSelectFromCard = (loc: any) => {
     setSelectedLocation(loc);
+  };
+
+  // Map pin click: highlights and floats that location to index 0
+  const handleSelectFromMap = (loc: any) => {
+    setSelectedLocation(loc);
+    setMapPinSelectedId(loc.id);
   };
 
   const matchingCustom = customLocations.filter((loc) => {
@@ -184,24 +194,21 @@ export default function Home() {
 
   const rawList = activeTab === "search" ? [...matchingCustom, ...results] : scoutingList;
 
-  // Whenever a marker or card is selected, float it to index 0 (the very first card)
+  // Only float to index 0 when selected specifically from map pin
   const displayedLocations = useMemo(() => {
-    if (!selectedLocation) return rawList;
-    const foundIdx = rawList.findIndex((l) => l.id === selectedLocation.id);
-    if (foundIdx === 0) return rawList;
-    if (foundIdx > 0) {
-      const selected = rawList[foundIdx];
-      const remaining = rawList.filter((_, i) => i !== foundIdx);
-      return [selected, ...remaining];
-    }
-    return [selectedLocation, ...rawList];
-  }, [rawList, selectedLocation]);
+    if (!mapPinSelectedId) return rawList;
+    const foundIdx = rawList.findIndex((l) => l.id === mapPinSelectedId);
+    if (foundIdx <= 0) return rawList;
+    const selected = rawList[foundIdx];
+    const remaining = rawList.filter((_, i) => i !== foundIdx);
+    return [selected, ...remaining];
+  }, [rawList, mapPinSelectedId]);
 
   useEffect(() => {
-    if (selectedLocation) {
+    if (mapPinSelectedId) {
       cardsTopRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
-  }, [selectedLocation?.id]);
+  }, [mapPinSelectedId]);
 
   return (
     <div className="min-h-screen py-4 px-3 sm:px-6 w-full flex flex-col gap-4">
@@ -444,7 +451,7 @@ export default function Home() {
                   return (
                     <div
                       key={loc.id}
-                      onClick={() => handleSelect(loc)}
+                      onClick={() => handleSelectFromCard(loc)}
                       className={`rounded-[22px] p-4 sm:p-5 transition-all duration-200 cursor-pointer flex flex-col justify-between border-[3px] ${
                         isSelected
                           ? "bg-gradient-to-br from-rose-50/90 via-white to-amber-50/70 border-[#e11d48] shadow-[6px_6px_0px_#9f1239] ring-4 ring-rose-300 scale-[1.01]"
@@ -452,22 +459,6 @@ export default function Home() {
                       }`}
                     >
                       <div>
-                        {/* 🔥 Active Map Pin Highlight Banner */}
-                        {isSelected && (
-                          <div className="mb-3 bg-gradient-to-r from-rose-600 via-pink-600 to-amber-500 text-white px-3.5 py-2 rounded-xl text-xs sm:text-sm font-black flex items-center justify-between shadow-md">
-                            <div className="flex items-center gap-2">
-                              <span className="relative flex h-3 w-3">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-90"></span>
-                                <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
-                              </span>
-                              <span>📍 พิกัดที่กำลังเลือกดูจากแผนที่ (แสดงอันดับที่ 1)</span>
-                            </div>
-                            <span className="text-[11px] bg-black/25 px-2.5 py-0.5 rounded-lg font-mono font-bold tracking-wider">
-                              ACTIVE PIN
-                            </span>
-                          </div>
-                        )}
-
                         {/* Top Badges */}
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-1.5 flex-wrap">
@@ -624,7 +615,7 @@ export default function Home() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleSelect(loc);
+                            handleSelectFromCard(loc);
                           }}
                           className={`btn text-xs sm:text-sm px-3 py-1.5 rounded-xl font-black flex items-center gap-1.5 ${
                             isSelected ? "btn-blue" : "bg-slate-100 border-slate-300 text-slate-800 hover:bg-slate-200"
@@ -676,7 +667,7 @@ export default function Home() {
             locations={displayedLocations}
             selectedLocation={selectedLocation}
             scoutingList={scoutingList}
-            onSelectLocation={handleSelect}
+            onSelectLocation={handleSelectFromMap}
             onToggleScout={toggleScout}
           />
         </div>
