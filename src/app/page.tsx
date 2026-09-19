@@ -536,31 +536,40 @@ export default function Home() {
                             <span className="line-clamp-1"><strong>ไฟกองถ่าย:</strong> {loc.productionSpecs.power}</span>
                           </div>
                         )}
-                        {loc.tel && (
-                          <div className="flex items-center gap-1.5">
-                            <Phone className="w-4 h-4 text-amber-600 shrink-0" />
+                        {/* Phone */}
+                        <div className="flex items-center gap-1.5">
+                          <Phone className={`w-4 h-4 shrink-0 ${loc.tel ? "text-amber-600" : "text-slate-400"}`} />
+                          <span className="font-bold text-slate-700 text-xs">โทร:</span>
+                          {loc.tel ? (
                             <a 
                               href={`tel:${loc.tel.replace(/[^0-9]/g, "")}`}
                               onClick={(e) => e.stopPropagation()}
-                              className="font-mono font-bold text-amber-800 hover:underline"
+                              className="font-mono font-bold text-amber-800 hover:underline text-xs"
                               title="คลิกเพื่อโทรออก"
                             >
                               {loc.tel}
                             </a>
-                          </div>
-                        )}
+                          ) : (
+                            <span className="font-mono font-bold text-slate-400 text-xs">-</span>
+                          )}
+                        </div>
 
                         {/* Email Contact */}
                         <div className="flex items-center gap-1.5">
-                          <Mail className="w-4 h-4 text-sky-600 shrink-0" />
-                          <a
-                            href={`mailto:${loc.email || loc.productionSpecs?.email || "saraban@tat.or.th"}?subject=${encodeURIComponent(`ขออนุญาตถ่ายทำภาพยนตร์/โฆษณา: ${loc.name_th} (${loc.province})`)}&body=${encodeURIComponent(`เรียน ผู้ดูแลสถานที่ ${loc.name_th} (${loc.province})\n\nข้าพเจ้าในนามกองถ่าย/ผู้ผลิต มีความประสงค์จะสอบถามขั้นตอนและขออนุญาตใช้สถานที่ถ่ายทำ...\n\nสถานที่: ${loc.name_th}\nจังหวัด: ${loc.province}\n\nจึงเรียนมาเพื่อโปรดพิจารณา`)}`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="font-bold text-sky-700 hover:text-sky-950 hover:underline truncate"
-                            title="คลิกเพื่อเปิดอีเมลร่างจดหมายขออนุญาตถ่ายทำ"
-                          >
-                            {loc.email || loc.productionSpecs?.email || "อีเมล: ติดต่อขออนุญาตถ่ายทำ (Mailto) ✉️"}
-                          </a>
+                          <Mail className={`w-4 h-4 shrink-0 ${(loc.email || loc.productionSpecs?.email) ? "text-sky-600" : "text-slate-400"}`} />
+                          <span className="font-bold text-slate-700 text-xs">อีเมล:</span>
+                          {(loc.email || loc.productionSpecs?.email) ? (
+                            <a
+                              href={`mailto:${loc.email || loc.productionSpecs?.email}?subject=${encodeURIComponent(`ขออนุญาตถ่ายทำภาพยนตร์/โฆษณา: ${loc.name_th} (${loc.province})`)}&body=${encodeURIComponent(`เรียน ผู้ดูแลสถานที่ ${loc.name_th} (${loc.province})\n\nข้าพเจ้าในนามกองถ่าย/ผู้ผลิต มีความประสงค์จะสอบถามขั้นตอนและขออนุญาตใช้สถานที่ถ่ายทำ...\n\nสถานที่: ${loc.name_th}\nจังหวัด: ${loc.province}\n\nจึงเรียนมาเพื่อโปรดพิจารณา`)}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="font-mono font-bold text-sky-700 hover:text-sky-950 hover:underline truncate text-xs"
+                              title="คลิกเพื่อเปิดอีเมลร่างจดหมายขออนุญาตถ่ายทำ"
+                            >
+                              {loc.email || loc.productionSpecs?.email}
+                            </a>
+                          ) : (
+                            <span className="font-mono font-bold text-slate-400 text-xs">-</span>
+                          )}
                         </div>
 
                         {/* Facebook Page */}
