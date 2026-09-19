@@ -237,24 +237,16 @@ export default function Home() {
 
   return (
     <div className="min-h-screen py-4 px-3 sm:px-6 w-full flex flex-col gap-4">
-      {/* 🚀 1. Lab 4 Top Navbar (เต็มหน้าจอ สไตล์ Lab 4 เป๊ะ) */}
+      {/* 🗺️ 1. Top Navbar */}
       <header className="bg-white border-[2.5px] border-[#7c3aed] rounded-[20px] shadow-[4px_4px_0px_#6d28d9] px-4 py-3 sm:px-6 sm:py-3.5 flex flex-wrap items-center justify-between gap-3 shrink-0">
         <div className="flex items-center gap-3">
           <div className="bg-[#ddd6fe] border-2 border-[#7c3aed] rounded-xl px-2.5 py-1 shadow-[2px_2px_0px_#6d28d9] text-xl flex items-center justify-center">
-            🚀
+            🗺️
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-base sm:text-lg font-black text-[#4c1d95] tracking-tight leading-tight">
-                ThaiScout AI Lab
-              </h1>
-              <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-[#fef08a] border border-[#d97706] text-[#78350f]">
-                Track 1
-              </span>
-            </div>
-            <p className="text-[11px] font-bold text-slate-500 hidden sm:block">
-              Ship an AI-Enabled System (Autonomous Location Scouting & Grounded Permit Agent)
-            </p>
+            <h1 className="text-lg sm:text-xl font-black text-[#4c1d95] tracking-tight leading-tight">
+              ThaiScout
+            </h1>
           </div>
         </div>
 
@@ -414,7 +406,7 @@ export default function Home() {
                     className="btn btn-yellow w-full sm:w-auto px-6 py-2.5 rounded-xl font-black text-xs sm:text-sm shadow-[2px_2px_0px_#b45309]"
                   >
                     <Search className="w-4 h-4 text-[#78350f]" />
-                    {loading ? "กำลังค้นหา..." : "รัน AI Scouting Agent"}
+                    {loading ? "กำลังค้นหา..." : "Scouting"}
                   </button>
                 </div>
               </div>
