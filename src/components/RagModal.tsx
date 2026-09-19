@@ -81,21 +81,21 @@ export default function RagModal({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-6 overflow-y-auto">
-      <div className="bg-white border-[3px] border-[#7c3aed] rounded-[28px] shadow-[8px_8px_0px_#6d28d9] w-full max-w-3xl overflow-hidden my-auto flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-3 sm:p-6 overflow-y-auto">
+      <div className="bg-white border-[3px] border-[#285185] rounded-[28px] shadow-[8px_8px_0px_#183354] w-full max-w-5xl overflow-hidden my-auto flex flex-col max-h-[92vh]">
         
         {/* Modal Header */}
-        <div className="bg-[#f5f3ff] border-b-2 border-[#7c3aed] p-4 sm:px-6 flex items-center justify-between shrink-0">
+        <div className="bg-[#f0f5f8] border-b-2 border-[#285185] p-4 sm:px-6 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="bg-[#ddd6fe] border-2 border-[#7c3aed] rounded-xl p-2 text-xl shadow-[2px_2px_0px_#6d28d9]">
-              ✨
+            <div className="bg-[#ccd9e2] border-2 border-[#285185] rounded-xl p-2 text-xl shadow-[2px_2px_0px_#183354]">
+              ⚡
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-base sm:text-lg font-black text-[#4c1d95]">
+                <h3 className="text-base sm:text-lg font-black text-[#1b3558]">
                   AI RAG Production Consultant
                 </h3>
-                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-[#bbf7d0] border border-[#16a34a] text-[#14532d]">
+                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-[#ccd9e2] border border-[#285185] text-[#1b3558]">
                   Grounded with TAT Corpus
                 </span>
               </div>
@@ -110,10 +110,10 @@ export default function RagModal({
               <button
                 type="button"
                 onClick={() => onToggleScout(location)}
-                className={`btn px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition cursor-pointer ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition cursor-pointer border ${
                   isPinned
-                    ? "bg-[#ffe4e6] border-2 border-[#e11d48] text-[#9f1239] shadow-[2px_2px_0px_#be123c]"
-                    : "btn-mint shadow-[2px_2px_0px_#15803d]"
+                    ? "bg-[#fbf6f6] border-[#6f4849] text-[#6f4849] shadow-xs"
+                    : "bg-[#d67940] text-white border-[#a8521d] shadow-xs hover:bg-[#c06530]"
                 }`}
               >
                 {isPinned ? "✕ ปลดหมุด" : "📌 + ปักหมุด"}
@@ -122,7 +122,7 @@ export default function RagModal({
 
             <button
               onClick={onClose}
-              className="btn btn-purple p-2 rounded-xl text-xs font-black cursor-pointer"
+              className="p-2 rounded-xl text-[#1b3558] hover:bg-slate-200 border border-slate-300 transition cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -134,7 +134,7 @@ export default function RagModal({
           
           {loading ? (
             <div className="py-16 flex flex-col items-center justify-center text-center">
-              <div className="w-10 h-10 border-4 border-[#7c3aed] border-t-transparent rounded-full animate-spin mb-3"></div>
+              <div className="w-10 h-10 border-4 border-[#285185] border-t-[#d67940] rounded-full animate-spin mb-3"></div>
               <p className="font-black text-slate-700 text-sm">
                 กำลังดึงบริบทสถานที่ & วิเคราะห์ความเป็นไปได้ของกองถ่าย (RAG Retrieval)...
               </p>
@@ -162,98 +162,108 @@ export default function RagModal({
                 </div>
               </div>
 
-              {/* 📄 Full Original Description from TAT */}
+              {/* 📄 Full Original Description from TAT (Span full width) */}
               {location.detail && (
-                <div className="bg-white border-2 border-slate-300 rounded-[20px] p-4 shadow-[3px_3px_0px_#94a3b8]">
-                  <div className="flex items-center justify-between mb-2 text-slate-800 font-black text-sm">
+                <div className="bg-white border-2 border-[#ccd9e2] rounded-[20px] p-4 shadow-sm">
+                  <div className="flex items-center justify-between mb-2 text-[#1b3558] font-black text-sm">
                     <span className="flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-[#0284c7]" />
+                      <FileText className="w-4 h-4 text-[#285185]" />
                       ข้อมูลรายละเอียดสถานที่ฉบับเต็ม (TAT Official Description)
                     </span>
                     <span className="text-[10px] font-mono text-slate-400 font-bold">
                       {location.detail.length} ตัวอักษร
                     </span>
                   </div>
-                  <p className="text-xs text-slate-700 leading-relaxed font-medium bg-[#f8fafc] p-3 rounded-xl border border-slate-200 whitespace-pre-line">
+                  <p className="text-xs text-slate-700 leading-relaxed font-medium bg-[#f0f5f8] p-3 rounded-xl border border-[#ccd9e2] whitespace-pre-line max-h-36 overflow-y-auto">
                     {location.detail}
                   </p>
                   {location.activity && (
-                    <p className="text-xs text-[#0c4a6e] font-bold mt-2">
+                    <p className="text-xs text-[#1b3558] font-bold mt-2">
                       🎯 กิจกรรมที่ ททท. แนะนำ: {location.activity}
                     </p>
                   )}
                 </div>
               )}
 
-              {/* 🎬 1. Cinematic & Lighting Analysis */}
-              <div className="bg-white border-2 border-[#0284c7] rounded-[20px] p-4 shadow-[3px_3px_0px_#0369a1]">
-                <div className="flex items-center gap-2 mb-2 text-[#0c4a6e] font-black text-sm">
-                  <Camera className="w-4 h-4 text-[#0284c7]" />
-                  <span>1. มุมกล้องและช่วงเวลาถ่ายทำ (Cinematic & Lighting)</span>
-                </div>
-                <div className="space-y-2 text-xs font-medium text-slate-700">
-                  <div className="bg-[#f0f9ff] p-2.5 rounded-xl border border-[#bae6fd]">
-                    <strong className="text-[#0c4a6e]">☀️ แสงที่แนะนำ:</strong> {dossier.cinematicAnalysis.lightingRecommendation}
+              {/* 2-Column Grid for Dossier Sections (กางออกด้านข้าง ไม่อึดอัด) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                
+                {/* 🎬 1. Cinematic & Lighting Analysis */}
+                <div className="bg-white border-2 border-[#285185] rounded-[20px] p-4 shadow-[3px_3px_0px_#183354] flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 mb-2 text-[#1b3558] font-black text-sm">
+                      <Camera className="w-4 h-4 text-[#d67940]" />
+                      <span>1. มุมกล้องและช่วงเวลาถ่ายทำ</span>
+                    </div>
+                    <div className="space-y-2 text-xs font-medium text-slate-700">
+                      <div className="bg-[#f0f5f8] p-2.5 rounded-xl border border-[#ccd9e2]">
+                        <strong className="text-[#285185]">☀️ แสงที่แนะนำ:</strong> {dossier.cinematicAnalysis.lightingRecommendation}
+                      </div>
+                      <div className="p-2">
+                        <strong className="text-slate-900">🎨 มิติภาพ:</strong> {dossier.cinematicAnalysis.visualAesthetic}
+                      </div>
+                    </div>
                   </div>
-                  <div className="p-2">
-                    <strong className="text-slate-900">🎨 มิติภาพ:</strong> {dossier.cinematicAnalysis.visualAesthetic}
-                  </div>
-                  <div className="p-2 text-amber-900 bg-amber-50 rounded-xl border border-amber-200">
+                  <div className="p-2 text-[#7c2d12] bg-[#fff7ed] rounded-xl border border-[#fed7aa] text-xs font-medium mt-2">
                     <strong>🔊 สภาพเสียงในกอง:</strong> {dossier.cinematicAnalysis.soundEnvironment}
                   </div>
                 </div>
-              </div>
 
-              {/* 🚐 2. Logistics & Gear Access */}
-              <div className="bg-white border-2 border-[#16a34a] rounded-[20px] p-4 shadow-[3px_3px_0px_#15803d]">
-                <div className="flex items-center gap-2 mb-2 text-[#14532d] font-black text-sm">
-                  <Truck className="w-4 h-4 text-[#16a34a]" />
-                  <span>2. การเดินทางและระบบไฟฟ้ากองถ่าย (Logistics & Power)</span>
-                </div>
-                <div className="space-y-2 text-xs font-medium text-slate-700">
-                  <div className="flex items-start gap-2">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                    <span><strong>ระดับความสะดวก:</strong> {dossier.logisticsAnalysis.accessGrade}</span>
+                {/* 🚐 2. Logistics & Gear Access */}
+                <div className="bg-white border-2 border-[#d67940] rounded-[20px] p-4 shadow-[3px_3px_0px_#a8521d] flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 mb-2 text-[#7c2d12] font-black text-sm">
+                      <Truck className="w-4 h-4 text-[#d67940]" />
+                      <span>2. การเดินทางและระบบไฟฟ้ากองถ่าย</span>
+                    </div>
+                    <div className="space-y-2 text-xs font-medium text-slate-700">
+                      <div className="flex items-start gap-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-[#d67940] shrink-0 mt-0.5" />
+                        <span><strong>ระดับความสะดวก:</strong> {dossier.logisticsAnalysis.accessGrade}</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-[#d67940] shrink-0 mt-0.5" />
+                        <span><strong>ระบบไฟและเครื่องปั่นไฟ:</strong> {dossier.logisticsAnalysis.powerAndGear}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-start gap-2">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                    <span><strong>ระบบไฟและเครื่องปั่นไฟ:</strong> {dossier.logisticsAnalysis.powerAndGear}</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                  <div className="p-2 bg-[#fff7ed] rounded-xl border border-[#fed7aa] text-xs font-medium mt-2 text-[#7c2d12]">
                     <span><strong>ขนาดกองถ่ายที่แนะนำ:</strong> {dossier.logisticsAnalysis.crewCapacity}</span>
                   </div>
                 </div>
+
               </div>
 
-              {/* 🔒 3. Permit & Safe Refusal (Lab 4 Core Rule) */}
-              <div className="bg-[#fff1f2] border-2 border-[#e11d48] rounded-[20px] p-4 shadow-[3px_3px_0px_#be123c]">
+              {/* 🔒 3. Permit & Safe Refusal (Span Full Width) */}
+              <div className="bg-[#fbf6f6] border-2 border-[#6f4849] rounded-[20px] p-4 shadow-[3px_3px_0px_#4d2f30]">
                 <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2 text-[#881337] font-black text-sm">
-                    <ShieldAlert className="w-4 h-4 text-[#e11d48]" />
+                  <div className="flex items-center gap-2 text-[#4a2829] font-black text-sm">
+                    <ShieldAlert className="w-4 h-4 text-[#6f4849]" />
                     <span>3. ระเบียบขออนุญาต & ป้องกันการมโน (Safe Refusal)</span>
                   </div>
-                  <span className="text-[10px] font-mono font-black uppercase px-2 py-0.5 rounded bg-white text-rose-700 border border-rose-300">
-                    Anti-Hallucination
+                  <span className="text-[10px] font-mono font-black uppercase px-2 py-0.5 rounded bg-white text-[#6f4849] border border-[#6f4849]/40">
+                    TAT Grounded
                   </span>
                 </div>
-                <div className="space-y-2 text-xs font-medium text-slate-800">
-                  <p>
-                    <strong>🏛️ หน่วยงานกำกับดูแล:</strong> {dossier.permitAndSafety.governingBody}
-                  </p>
-                  <p className="bg-white/80 p-2.5 rounded-xl border border-rose-200">
-                    <strong>🚁 ระเบียบโดรน:</strong> {dossier.permitAndSafety.droneNotice}
-                  </p>
-                  <div className="bg-amber-100/80 border border-amber-300 p-2.5 rounded-xl text-amber-900 text-[11px] font-bold">
-                    ⚠️ <strong>กฎ Safe Refusal:</strong> {dossier.permitAndSafety.safeRefusalRule}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs font-medium text-slate-800">
+                  <div className="space-y-2">
+                    <p className="bg-white p-2.5 rounded-xl border border-[#6f4849]/20">
+                      <strong>🏛️ หน่วยงานกำกับดูแล:</strong> {dossier.permitAndSafety.governingBody}
+                    </p>
+                    <p className="bg-white p-2.5 rounded-xl border border-[#6f4849]/20">
+                      <strong>🚁 ระเบียบโดรน:</strong> {dossier.permitAndSafety.droneNotice}
+                    </p>
+                  </div>
+                  <div className="bg-[#fdf3eb] border border-[#fcd9bd] p-3 rounded-xl text-[#7c2d12] text-[11px] font-bold flex flex-col justify-center">
+                    <div>⚠️ <strong>กฎ Safe Refusal:</strong> {dossier.permitAndSafety.safeRefusalRule}</div>
                   </div>
                 </div>
               </div>
 
-              {/* 💬 4. Interactive Q&A Assistant (RAG Chat on this location) */}
-              <div className="bg-white border-2 border-[#7c3aed] rounded-[20px] p-4 shadow-[3px_3px_0px_#6d28d9]">
-                <div className="flex items-center gap-2 mb-2 text-[#4c1d95] font-black text-sm">
-                  <HelpCircle className="w-4 h-4 text-[#7c3aed]" />
+              {/* 💬 4. Interactive Q&A Assistant */}
+              <div className="bg-white border-2 border-[#285185] rounded-[20px] p-4 shadow-[3px_3px_0px_#183354]">
+                <div className="flex items-center gap-2 mb-2 text-[#1b3558] font-black text-sm">
+                  <HelpCircle className="w-4 h-4 text-[#285185]" />
                   <span>ถามคำถามเจาะลึกเฉพาะสถานที่นี้ (Grounded Q&A)</span>
                 </div>
 
@@ -264,7 +274,7 @@ export default function RagModal({
                       key={idx}
                       onClick={() => handleAsk(q)}
                       disabled={qaLoading}
-                      className="text-[11px] px-2.5 py-1 rounded-lg bg-[#f5f3ff] hover:bg-[#ddd6fe] text-[#4c1d95] border border-[#ddd6fe] font-bold transition cursor-pointer text-left"
+                      className="text-[11px] px-2.5 py-1 rounded-lg bg-[#f0f5f8] hover:bg-[#ccd9e2] text-[#1b3558] border border-[#ccd9e2] font-bold transition cursor-pointer text-left"
                     >
                       {q}
                     </button>
@@ -279,12 +289,12 @@ export default function RagModal({
                     onChange={(e) => setQuestion(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleAsk()}
                     placeholder="เช่น ทางเดินแคบไหม? มีห้องน้ำสำหรับนักแสดงไหม?..."
-                    className="flex-1 bg-[#fafaf9] border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-[#7c3aed]"
+                    className="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-[#285185]"
                   />
                   <button
                     onClick={() => handleAsk()}
                     disabled={qaLoading || !question.trim()}
-                    className="btn btn-purple text-xs px-4 py-2 rounded-xl font-black shrink-0"
+                    className="text-xs px-4 py-2 rounded-xl font-black bg-[#285185] hover:bg-[#1b3558] text-white flex items-center gap-1.5 transition cursor-pointer shadow-xs shrink-0"
                   >
                     <Send className="w-3.5 h-3.5" />
                     {qaLoading ? "กำลังวิเคราะห์..." : "ถาม AI"}
@@ -296,15 +306,15 @@ export default function RagModal({
                   <div className="mt-4 space-y-3 pt-3 border-t border-slate-200">
                     {qaList.map((item, idx) => (
                       <div key={idx} className="space-y-1.5 text-xs">
-                        <div className="font-black text-[#4c1d95] bg-[#f5f3ff] p-2 rounded-lg border border-[#ddd6fe]">
+                        <div className="font-black text-[#1b3558] bg-[#f0f5f8] p-2 rounded-lg border border-[#ccd9e2]">
                           ❓ {item.q}
                         </div>
-                        <div className="bg-white p-3 rounded-xl border border-slate-300 whitespace-pre-line text-slate-800 leading-relaxed font-medium shadow-xs">
+                        <div className="bg-white p-3 rounded-xl border border-slate-200 whitespace-pre-line text-slate-800 leading-relaxed font-medium shadow-xs">
                           {item.a}
                           {item.citation && (
                             <div className="mt-2 pt-2 border-t border-slate-200 text-[10px] font-mono text-slate-500 flex items-center justify-between">
                               <span>📚 แหล่งข้อมูล: {item.citation.source}</span>
-                              <span className="font-bold text-[#0284c7]">ID: #{item.citation.corpusId}</span>
+                              <span className="font-bold text-[#285185]">ID: #{item.citation.corpusId}</span>
                             </div>
                           )}
                         </div>
@@ -319,13 +329,13 @@ export default function RagModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="bg-[#f8fafc] border-t-2 border-slate-200 p-3 sm:px-6 flex items-center justify-between text-xs shrink-0">
+        <div className="bg-[#f0f5f8] border-t-2 border-slate-200 p-3 sm:px-6 flex items-center justify-between text-xs shrink-0">
           <div className="text-[11px] font-bold text-slate-500">
             ระบบวิเคราะห์โดย ThaiScout AI RAG Engine · อ้างอิงฐานข้อมูล ททท. 8,628 แห่ง
           </div>
           <button
             onClick={onClose}
-            className="btn btn-purple text-xs px-4 py-1.5 rounded-xl font-black cursor-pointer"
+            className="px-4 py-1.5 rounded-xl font-bold bg-[#285185] hover:bg-[#1b3558] text-white transition cursor-pointer"
           >
             ปิดหน้าต่าง
           </button>

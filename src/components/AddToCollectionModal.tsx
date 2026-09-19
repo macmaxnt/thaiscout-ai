@@ -7,9 +7,10 @@ import { Collection } from "./CollectionsModal";
 interface AddToCollectionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  location: any;
+  location: any; // Can be a single location or an array of locations
   collections: Collection[];
   onToggleLocationInCollection: (colId: string, location: any) => void;
+  onAddMultipleToCollection?: (colId: string, locations: any[]) => void;
   onCreateCollection: (name: string, description?: string) => void;
 }
 
@@ -19,6 +20,7 @@ export default function AddToCollectionModal({
   location,
   collections,
   onToggleLocationInCollection,
+  onAddMultipleToCollection,
   onCreateCollection,
 }: AddToCollectionModalProps) {
   const [newColName, setNewColName] = useState("");
@@ -26,12 +28,23 @@ export default function AddToCollectionModal({
 
   if (!isOpen || !location) return null;
 
+  const isMultiple = Array.isArray(location);
+  const locationList = isMultiple ? location : [location];
+
   const handleCreateAndAdd = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newColName.trim()) return;
     onCreateCollection(newColName.trim());
     setNewColName("");
     setIsCreating(false);
+  };
+
+  const handleSelectCollection = (colId: string) => {
+    if (isMultiple && onAddMultipleToCollection) {
+      onAddMultipleToCollection(colId, locationList);
+    } else {
+      onToggleLocationInCollection(colId, location);
+    }
   };
 
   return (
@@ -46,10 +59,12 @@ export default function AddToCollectionModal({
             <Folder className="w-5 h-5 text-[#285185]" />
             <div>
               <h3 className="text-sm sm:text-base font-black text-[#1b3558]">
-                บันทึกเข้าคอลเลกชัน
+                {isMultiple ? "บันทึกทั้งหมดเข้าคอลเลกชัน" : "บันทึกเข้าคอลเลกชัน"}
               </h3>
               <p className="text-[11px] font-bold text-slate-500 truncate max-w-[260px]">
-                {location.name_th} ({location.province})
+                {isMultiple
+                  ? `เลือกคลังเพื่อเพิ่มสถานที่ทั้ง ${locationList.length} แห่ง`
+                  : `${location.name_th} (${location.province})`}
               </p>
             </div>
           </div>
@@ -68,13 +83,15 @@ export default function AddToCollectionModal({
           </span>
 
           {collections.map((col) => {
-            const isInCollection = col.locations.some((l) => l.id === location.id);
+            const isInCollection = isMultiple
+              ? locationList.every((l) => col.locations.some((cl) => cl.id === l.id))
+              : col.locations.some((l) => l.id === location.id);
             return (
               <button
                 key={col.id}
                 type="button"
-                onClick={() => onToggleLocationInCollection(col.id, location)}
-                className={`w-full p-3 rounded-xl border-2 transition flex items-center justify-between text-left ${
+                onClick={() => handleSelectCollection(col.id)}
+                className={`w-full p-3 rounded-xl border-2 transition flex items-center justify-between text-left cursor-pointer ${
                   isInCollection
                     ? "bg-emerald-50 border-emerald-500 shadow-sm"
                     : "bg-white border-slate-200 hover:border-[#285185] hover:bg-slate-50"

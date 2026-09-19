@@ -3,49 +3,61 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import dynamic from "next/dynamic";
 import { 
-  Clapperboard, Search, MapPin, Phone, Clock, AlertTriangle, 
-  CheckCircle2, Sparkles, Navigation, Share2, Compass, Film, ExternalLink,
-  Sliders, Layers, ShieldCheck, Route, Eye, Home as HomeIcon, Zap, Building2, Mail,
-  Folder, FolderPlus, FolderOpen, Bookmark
+  Search, MapPin, Sparkles, Navigation, Layers, CheckCircle2, 
+  ExternalLink, PanelLeftClose, PanelLeft, Folder, Bookmark, Pin,
+  LogOut, User, Building2, ChevronRight, X, Phone, Clock, Compass,
+  Edit3, Trash2, Check, GripVertical, ChevronUp, ChevronDown
 } from "lucide-react";
 
 import RagModal from "@/components/RagModal";
 import SocialReviewsModal from "@/components/SocialReviewsModal";
-import ProvinceSelector from "@/components/ProvinceSelector";
 import CollectionsModal, { Collection } from "@/components/CollectionsModal";
 import AddToCollectionModal from "@/components/AddToCollectionModal";
-import { detectProvinceFromText, getProvincesInRegion, REGION_LIST } from "@/data/provinces";
+import LoginView from "@/components/LoginView";
+import { 
+  detectProvinceFromText, 
+  getProvincesInRegion, 
+  REGION_LIST, 
+  THAI_PROVINCES, 
+  searchProvinces 
+} from "@/data/provinces";
+import { MockUser, getCurrentSession, setCurrentSession } from "@/utils/mockAuth";
 
 // Dynamic import for Leaflet map (client-only)
 const InteractiveMap = dynamic(() => import("@/components/InteractiveMap"), {
   ssr: false,
   loading: () => (
-    <div className="bg-white border-[2.5px] border-[#0284c7] rounded-[24px] shadow-[5px_5px_0px_#0369a1] h-[550px] flex flex-col items-center justify-center p-6 text-center">
-      <div className="w-10 h-10 border-4 border-[#0284c7] border-t-transparent rounded-full animate-spin mb-3"></div>
-      <p className="font-black text-slate-700 text-sm">กำลังโหลดแผนที่ดาวเทียม / พิกัดกองถ่าย...</p>
-      <p className="text-xs font-semibold text-slate-400 mt-1">Grounded with OpenStreetMap & TAT Coordinates</p>
+    <div className="bg-white border-2 border-[#285185] rounded-2xl h-[550px] flex flex-col items-center justify-center p-6 text-center shadow-[4px_4px_0px_#183354]">
+      <div className="w-10 h-10 border-4 border-[#285185] border-t-transparent rounded-full animate-spin mb-3"></div>
+      <p className="font-bold text-slate-800 text-sm">กำลังโหลดแผนที่ดาวเทียม / พิกัดกองถ่าย...</p>
+      <p className="text-xs font-semibold text-slate-500 mt-1">Grounded with OpenStreetMap & TAT Coordinates</p>
     </div>
   ),
 });
 
 export default function Home() {
+  // Authentication session state
+  const [currentUser, setCurrentUser] = useState<MockUser | null>(null);
+  const [authInitialized, setAuthInitialized] = useState(false);
+
+  // Sidebar toggle state
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  // Search & Filters state
   const [brief, setBrief] = useState("");
-  const [province, setProvince] = useState("all");
+  const [selectedRegion, setSelectedRegion] = useState<string>("ทั้งหมด");
+  const [selectedProvince, setSelectedProvince] = useState<string>("all");
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<any[]>([]);
   const [scoutingList, setScoutingList] = useState<any[]>([]);
-  const [collections, setCollections] = useState<Collection[]>([
-    {
-      id: "default",
-      name: "📌 รายการปักหมุดหลัก",
-      description: "สถานที่ทั้งหมดที่ปักหมุดไว้",
-      createdAt: new Date().toISOString(),
-      locations: [],
-    },
-  ]);
+  const [collections, setCollections] = useState<Collection[]>([]);
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null);
+  const [isEditingActiveColName, setIsEditingActiveColName] = useState(false);
+  const [editingActiveColName, setEditingActiveColName] = useState("");
   const [isCollectionsModalOpen, setIsCollectionsModalOpen] = useState(false);
   const [addToCollectionTarget, setAddToCollectionTarget] = useState<any | null>(null);
+
+  // Map and Selection state
   const [selectedLocation, setSelectedLocation] = useState<any | null>(null);
   const [mapPinSelectedId, setMapPinSelectedId] = useState<string | null>(null);
   const [filterOnlyPinned, setFilterOnlyPinned] = useState(false);
@@ -54,123 +66,55 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<"search" | "scout">("search");
   const [totalDbMatches, setTotalDbMatches] = useState<number>(8628);
   const [currentLimit, setCurrentLimit] = useState<number>(400);
-  const [filterRegion, setFilterRegion] = useState<string>("ทั้งหมด");
   const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
   const [geminiAnalysis, setGeminiAnalysis] = useState<any>(null);
 
-  const toggleExpand = (id: string, e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    setExpandedIds((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
+  // Card Drag & Drop state (for reordering in collection or pinned workspace)
+  const [cardDraggedIndex, setCardDraggedIndex] = useState<number | null>(null);
+  const [cardDragOverIndex, setCardDragOverIndex] = useState<number | null>(null);
 
-  const sampleBriefs = [
-    { title: "🌊 ทะเล & ผาหิน", text: "หาดทรายขาว หน้าผาหิน จุดชมวิวพระอาทิตย์ตก", prov: "ภูเก็ต" },
-    { title: "🎬 MV น้ำตกลึกลับ", text: "น้ำตก ลำธาร โขดหิน บรรยากาศลึกลับ ถ่าย MV เพลงเศร้า", prov: "เชียงใหม่" },
-    { title: "🏛️ ซีนพีเรียดโบราณ", text: "วัดเก่า โบราณสถาน สถาปัตยกรรมไม้โบราณ บรรยากาศสงบ", prov: "พระนครศรีอยุธยา" },
-    { title: "🌾 ทุ่งกว้าง & คาวบอย", text: "ทุ่งหญ้า ภูเขา อ่างเก็บน้ำ บรรยากาศแคมป์ปิ้งคาวบอย", prov: "นครราชสีมา" },
-    { title: "🏙️ ดาดฟ้าแสงสีตึกสูง", text: "ตึกสูง โมเดิร์น แสงไฟนีออน วิวเมืองหลวงยามค่ำคืน", prov: "กรุงเทพมหานคร" },
-    { title: "🌊 ริมโขงสโลว์ไลฟ์", text: "ถนนคนเดินริมแม่น้ำโขง บ้านไม้โบราณ หมอกยามเช้า", prov: "เลย" },
-  ];
+  const cardsTopRef = useRef<HTMLDivElement>(null);
 
-  const handleSearch = async (targetBrief = brief, targetProv = province, limitToFetch?: number) => {
-    setLoading(true);
-    // When scouting/searching, clear active selection so the map shows the entire overview
-    setSelectedLocation(null);
-
-    // Auto-detect province if brief contains province name/alias
-    let provToSend = targetProv;
-    if (targetProv === "all" && targetBrief.trim().length > 0) {
-      const detected = detectProvinceFromText(targetBrief);
-      if (detected.detectedProvince) {
-        provToSend = detected.detectedProvince;
-      }
-    }
-
-    try {
-      const res = await fetch("/api/scout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          brief: targetBrief,
-          province: provToSend,
-          limit: limitToFetch,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setResults(data.locations);
-        if (data.totalMatches !== undefined) {
-          setTotalDbMatches(data.totalMatches);
-        }
-        setGeminiAnalysis(data.geminiAnalysis || null);
-        // Switch back to search results view
-        setActiveTab("search");
-        setFilterOnlyPinned(false);
-        setActiveCollectionId(null);
-        // Keep selectedLocation null so the map frames all pins without flying into any random pin
-        setSelectedLocation(null);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleLoadMore = () => {
-    const nextLimit = currentLimit + 200;
-    setCurrentLimit(nextLimit);
-    handleSearch(brief, province, nextLimit);
-  };
-
+  // Initialize session from Local Storage
   useEffect(() => {
-    handleSearch();
+    const session = getCurrentSession();
+    if (session) {
+      setCurrentUser(session);
+    }
+    setAuthInitialized(true);
   }, []);
 
-  // โหลดรายการปักหมุดและ Collections ที่เคยเซฟไว้จาก localStorage เมื่อเปิดเว็บ
-  useEffect(() => {
-    try {
-      const savedPins = localStorage.getItem("thaiscout_saved_locations");
-      if (savedPins) {
-        const parsed = JSON.parse(savedPins);
-        if (Array.isArray(parsed)) {
-          setScoutingList(parsed);
-        }
-      }
+  const handleLogin = (user: MockUser) => {
+    setCurrentUser(user);
+    setCurrentSession(user);
+  };
 
-      const savedCollections = localStorage.getItem("thaiscout_collections");
-      if (savedCollections) {
-        const parsedCols = JSON.parse(savedCollections);
-        if (Array.isArray(parsedCols) && parsedCols.length > 0) {
-          setCollections(parsedCols);
-        }
-      }
-    } catch (e) {
-      console.error("Failed to load saved collections:", e);
-    }
-  }, []);
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setCurrentSession(null);
+  };
 
-  // บันทึก Collections ลง localStorage
-  const saveCollectionsToStorage = (newCols: Collection[]) => {
+  // Local storage synchronization for scouting pins
+  const saveToStorage = (list: any[]) => {
     try {
-      localStorage.setItem("thaiscout_collections", JSON.stringify(newCols));
+      localStorage.setItem("thaiscout_saved_locations", JSON.stringify(list));
     } catch (e) {
-      console.error("Failed to save collections to storage:", e);
+      console.error(e);
     }
   };
 
-  // บันทึกรายการปักหมุดลง localStorage
-  const saveToStorage = (newList: any[]) => {
+  const saveCollectionsToStorage = (cols: Collection[]) => {
     try {
-      localStorage.setItem("thaiscout_saved_locations", JSON.stringify(newList));
+      localStorage.setItem("thaiscout_collections", JSON.stringify(cols));
     } catch (e) {
-      console.error("Failed to save scouting locations to storage:", e);
+      console.error(e);
     }
   };
 
+  // Collections handlers
   const handleCreateCollection = (name: string, description?: string) => {
     const newCol: Collection = {
-      id: "col_" + Date.now(),
+      id: "col-" + Date.now(),
       name,
       description,
       createdAt: new Date().toISOString(),
@@ -182,14 +126,35 @@ export default function Home() {
     return newCol.id;
   };
 
+  const handleRenameCollection = (colId: string, newName: string) => {
+    if (!newName.trim()) return;
+    const updated = collections.map((c) =>
+      c.id === colId ? { ...c, name: newName.trim() } : c
+    );
+    setCollections(updated);
+    saveCollectionsToStorage(updated);
+  };
+
   const handleDeleteCollection = (colId: string) => {
-    if (colId === "default") return;
     const updated = collections.filter((c) => c.id !== colId);
     setCollections(updated);
     saveCollectionsToStorage(updated);
     if (activeCollectionId === colId) {
       setActiveCollectionId(null);
     }
+  };
+
+  const handleAddMultipleToCollection = (colId: string, locs: any[]) => {
+    const updated = collections.map((col) => {
+      if (col.id === colId) {
+        const existingIds = new Set(col.locations.map((l) => l.id));
+        const newItems = locs.filter((l) => !existingIds.has(l.id));
+        return { ...col, locations: [...col.locations, ...newItems] };
+      }
+      return col;
+    });
+    setCollections(updated);
+    saveCollectionsToStorage(updated);
   };
 
   const handleToggleLocationInCollection = (colId: string, location: any) => {
@@ -205,13 +170,6 @@ export default function Home() {
     });
     setCollections(updated);
     saveCollectionsToStorage(updated);
-
-    // Also ensure it syncs with general scouting list
-    if (!scoutingList.some((x) => x.id === location.id)) {
-      const newPins = [...scoutingList, location];
-      setScoutingList(newPins);
-      saveToStorage(newPins);
-    }
   };
 
   const handleRemoveLocationFromCollection = (colId: string, locId: string) => {
@@ -223,6 +181,22 @@ export default function Home() {
     });
     setCollections(updated);
     saveCollectionsToStorage(updated);
+  };
+
+  const handleReorderCollectionLocations = (colId: string, newLocations: any[]) => {
+    const updated = collections.map((col) => {
+      if (col.id === colId) {
+        return { ...col, locations: newLocations };
+      }
+      return col;
+    });
+    setCollections(updated);
+    saveCollectionsToStorage(updated);
+  };
+
+  const handleReorderScoutingList = (newLocations: any[]) => {
+    setScoutingList(newLocations);
+    saveToStorage(newLocations);
   };
 
   const toggleScout = (item: any) => {
@@ -237,15 +211,6 @@ export default function Home() {
       const updated = [...scoutingList, item];
       setScoutingList(updated);
       saveToStorage(updated);
-      // Auto add to default collection as well
-      const updatedCols = collections.map((col) => {
-        if (col.id === "default" && !col.locations.some((l) => l.id === item.id)) {
-          return { ...col, locations: [...col.locations, item] };
-        }
-        return col;
-      });
-      setCollections(updatedCols);
-      saveCollectionsToStorage(updatedCols);
     }
   };
 
@@ -263,7 +228,6 @@ export default function Home() {
     setMapPinSelectedId(null);
   };
 
-  // Card click on the side: toggle selection (if clicking the already selected card, deselect it)
   const handleSelectFromCard = (loc: any) => {
     if (selectedLocation?.id === loc.id) {
       handleDeselect();
@@ -272,23 +236,157 @@ export default function Home() {
     }
   };
 
-  // Map pin click: highlights and floats that location to index 0
   const handleSelectFromMap = (loc: any) => {
     setSelectedLocation(loc);
     setMapPinSelectedId(loc.id);
   };
 
-  const cardsTopRef = useRef<HTMLDivElement>(null);
+  const toggleExpand = (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setExpandedIds((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
 
-  const rawList = activeCollectionId
-    ? (collections.find((c) => c.id === activeCollectionId)?.locations || [])
-    : filterOnlyPinned
-    ? scoutingList
-    : activeTab === "search"
-    ? results
-    : scoutingList;
+  // Search API caller
+  const handleSearch = async (
+    targetBrief = brief,
+    targetReg = selectedRegion,
+    targetProv = selectedProvince,
+    limitToFetch?: number
+  ) => {
+    // If nationwide ('ทั้งหมด') and no search keyword, don't show all locations (keep clean initial workspace)
+    if (targetReg === "ทั้งหมด" && (!targetProv || targetProv === "all") && !targetBrief.trim()) {
+      setResults([]);
+      setTotalDbMatches(8628);
+      setGeminiAnalysis(null);
+      setSelectedLocation(null);
+      return;
+    }
 
-  // Only float to index 0 when selected specifically from map pin
+    setLoading(true);
+    setSelectedLocation(null);
+
+    let effectiveProvinceParam = "all";
+    if (targetProv && targetProv !== "all") {
+      effectiveProvinceParam = targetProv;
+    } else if (targetReg && targetReg !== "ทั้งหมด") {
+      effectiveProvinceParam = "region:" + targetReg;
+    }
+
+    if (effectiveProvinceParam === "all" && targetBrief.trim().length > 0) {
+      const detected = detectProvinceFromText(targetBrief);
+      if (detected.detectedProvince) {
+        effectiveProvinceParam = detected.detectedProvince;
+      }
+    }
+
+    try {
+      const res = await fetch("/api/scout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          brief: targetBrief,
+          province: effectiveProvinceParam,
+          limit: limitToFetch || currentLimit,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setResults(data.locations);
+        if (data.totalMatches !== undefined) {
+          setTotalDbMatches(data.totalMatches);
+        }
+        setGeminiAnalysis(data.geminiAnalysis || null);
+        setActiveTab("search");
+        setFilterOnlyPinned(false);
+        setActiveCollectionId(null);
+        setSelectedLocation(null);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLoadMore = () => {
+    const nextLimit = currentLimit + 300;
+    setCurrentLimit(nextLimit);
+    handleSearch(brief, selectedRegion, selectedProvince, nextLimit);
+  };
+
+  // Initial load - keep clean when nationwide and no keyword
+  useEffect(() => {
+    // Starts empty as requested ("หน้าค้นหาตอนเลือกทั่วประเทศไม่ต้องให้แสดงอะไรมา")
+  }, []);
+
+  useEffect(() => {
+    try {
+      const savedPins = localStorage.getItem("thaiscout_saved_locations");
+      if (savedPins) {
+        const parsed = JSON.parse(savedPins);
+        if (Array.isArray(parsed)) setScoutingList(parsed);
+      }
+      const savedCols = localStorage.getItem("thaiscout_collections");
+      if (savedCols) {
+        const parsed = JSON.parse(savedCols);
+        if (Array.isArray(parsed)) {
+          // Filter out legacy automatic default collection if present
+          const userOnlyCols = parsed.filter((c: Collection) => c.id !== "default");
+          setCollections(userOnlyCols);
+          if (userOnlyCols.length !== parsed.length) {
+            saveCollectionsToStorage(userOnlyCols);
+          }
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
+  // List of provinces available under currently selected region
+  const provincesInSelectedRegion = useMemo(() => {
+    if (selectedRegion === "ทั้งหมด") {
+      return [];
+    }
+    return THAI_PROVINCES.filter((p) => p.region === selectedRegion);
+  }, [selectedRegion]);
+
+  // Province list specifically for pinned locations under the selected region
+  const pinnedProvincesInSelectedRegion = useMemo(() => {
+    if (selectedRegion === "ทั้งหมด") {
+      return Array.from(new Set(scoutingList.map((l) => l.province))).filter(Boolean);
+    }
+    const regionProvinceNames = new Set(
+      THAI_PROVINCES.filter((p) => p.region === selectedRegion).map((p) => p.name)
+    );
+    return Array.from(
+      new Set(
+        scoutingList
+          .map((l) => l.province)
+          .filter((prov) => regionProvinceNames.has(prov))
+      )
+    );
+  }, [scoutingList, selectedRegion]);
+
+  const rawList = useMemo(() => {
+    if (activeCollectionId) {
+      return collections.find((c) => c.id === activeCollectionId)?.locations || [];
+    }
+    if (filterOnlyPinned || activeTab === "scout") {
+      return scoutingList.filter((loc) => {
+        if (selectedRegion !== "ทั้งหมด") {
+          const provInfo = THAI_PROVINCES.find((p) => p.name === loc.province);
+          if (provInfo && provInfo.region !== selectedRegion) return false;
+        }
+        if (selectedProvince !== "all" && loc.province !== selectedProvince) {
+          return false;
+        }
+        return true;
+      });
+    }
+    return activeTab === "search" ? results : scoutingList;
+  }, [activeCollectionId, collections, filterOnlyPinned, activeTab, scoutingList, results, selectedRegion, selectedProvince]);
+
   const displayedLocations = useMemo(() => {
     if (!mapPinSelectedId) return rawList;
     const foundIdx = rawList.findIndex((l) => l.id === mapPinSelectedId);
@@ -304,643 +402,990 @@ export default function Home() {
     }
   }, [mapPinSelectedId]);
 
+  // If not logged in yet, render Login/Registration view
+  if (authInitialized && !currentUser) {
+    return <LoginView onLogin={handleLogin} />;
+  }
+
   return (
-    <div className="min-h-screen py-4 px-3 sm:px-6 w-full flex flex-col gap-4">
-      {/* 🗺️ 1. Top Navbar */}
-      <header className="bg-white border-[2.5px] border-[#285185] rounded-[20px] shadow-[4px_4px_0px_#183354] px-4 py-3 sm:px-6 sm:py-3.5 flex flex-wrap items-center justify-between gap-3 shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="bg-[#ccd9e2] border-2 border-[#285185] rounded-xl px-2.5 py-1 shadow-[2px_2px_0px_#183354] text-xl flex items-center justify-center">
-            🗺️
-          </div>
-          <div>
-            <h1 className="text-lg sm:text-xl font-black text-[#1b3558] tracking-tight leading-tight flex items-center gap-2">
-              ThaiScout
-              <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-[#fcd9bd] text-[#7c2d12] border border-[#d67940]">
-                Creative Recce
-              </span>
-            </h1>
-          </div>
-        </div>
+    <div className="flex flex-1 h-screen overflow-hidden relative">
 
-        {/* Actions & Badges */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* ปุ่มเปิดคลังเซฟ Collections */}
-          <button
-            onClick={() => setIsCollectionsModalOpen(true)}
-            className="btn px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-black bg-[#285185] hover:bg-[#1b3558] text-white flex items-center gap-1.5 shadow-[2px_2px_0px_#183354] transition"
-            title="เปิดดูและจัดการกล่องเซฟโลเคชันทั้งหมด"
-          >
-            <Folder className="w-4 h-4 text-sky-300" />
-            <span>คลังเซฟ (Collections)</span>
-            <span className="bg-white/20 text-white text-[11px] px-1.5 py-0.2 rounded-full font-mono">
-              {collections.reduce((sum, c) => sum + c.locations.length, 0)}
-            </span>
-          </button>
-
-          <div className="bg-[#f0f5f8] border-2 border-[#ccd9e2] px-3.5 py-1.5 rounded-xl text-xs font-black text-[#1b3558] flex items-center gap-1.5 shadow-[2px_2px_0px_#285185]">
-            <span>🏛️ ฐานข้อมูล ททท. 8,628 พิกัด (Ground Truth 100%)</span>
-          </div>
-        </div>
-
-      </header>
-
-      {/* Main Scout & Recce Board */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start w-full">
-        
-        {/* === LEFT COLUMN: Brief Console & Multi-Column Results Grid === */}
-        <div className="lg:col-span-7 xl:col-span-7 2xl:col-span-8 flex flex-col gap-4">
-          
-          {/* Creative Brief Console (Travel Flatlay Palette: Navy, Sky, Leather Amber) */}
-          <div className="bg-white border-[2.5px] border-[#285185] rounded-[22px] shadow-[4px_4px_0px_#183354] p-4 sm:p-5 flex flex-col gap-3">
-            
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center gap-2">
-                <span className="bg-[#ccd9e2] border border-[#285185] rounded-lg px-2.5 py-0.5 text-xs font-black text-[#1b3558] flex items-center gap-1">
-                  <Sparkles className="w-3.5 h-3.5 text-[#d67940]" />
-                  Creative Brief Console
-                </span>
-                <span className="text-xs font-bold text-slate-500 hidden sm:inline">
-                  Bounded AI Agent · FTS Grounding
-                </span>
+        {/* 🗂️ SIDEBAR (Drawer Style / Collapsible: Expands to 64-72, Collapses to Slim Icon Rail w-16) */}
+        <aside
+          className={`${
+            isSidebarOpen ? "w-64 sm:w-72" : "w-16"
+          } transition-all duration-300 ease-in-out bg-[#285185] border-r border-[#183354] flex flex-col shrink-0 z-30 shadow-xl text-white h-full`}
+        >
+          {/* 1. SIDEBAR TOP: Brand Title / Icon + Toggle Button */}
+          <div className={`p-3.5 border-b border-white/10 flex items-center shrink-0 ${
+            isSidebarOpen ? "justify-between" : "justify-center flex-col gap-2"
+          }`}>
+            <div className="flex items-center gap-2.5">
+              <div 
+                onClick={() => !isSidebarOpen && setIsSidebarOpen(true)}
+                className="w-9 h-9 rounded-xl bg-[#d67940] flex items-center justify-center text-white font-black text-lg shadow-sm border border-white/20 cursor-pointer hover:scale-105 transition"
+                title="Travel Location"
+              >
+                ⚡
               </div>
-            </div>
-
-            <div>
-              <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-                ค้นหาโลเคชันถ่ายทำจาก <span className="text-[#285185]">Creative Brief</span>
-              </h2>
-              <p className="text-xs sm:text-sm font-semibold text-slate-700 mt-1">
-                พิมพ์บรรยากาศหรืออารมณ์ฉากที่ต้องการ หรือ <strong className="text-slate-900">เลือกดูรายภาค/รายจังหวัดแบบไม่ต้องพิมพ์</strong> ระบบจะดึงพิกัดจริงและปักหมุดบนแผนที่ดาวเทียมทันที
-              </p>
-            </div>
-
-            {/* Input Box */}
-            <div className="bg-[#f0f5f8] border-2 border-[#ccd9e2] rounded-[18px] p-3.5 focus-within:border-[#285185] focus-within:shadow-[3px_3px_0px_#183354] transition">
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-black text-[#1b3558] uppercase font-mono">
-                  Brief
-                </label>
-                {brief && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setBrief("");
-                      handleSearch("", province);
-                    }}
-                    className="text-xs font-black text-rose-600 hover:text-rose-800 hover:underline cursor-pointer"
-                  >
-                    ✕ ล้างคำค้นหา (แสดงสถานที่ทั้งหมด)
-                  </button>
-                )}
-              </div>
-              <textarea
-                rows={2}
-                value={brief}
-                onChange={(e) => setBrief(e.target.value)}
-                placeholder="เช่น อยากได้น้ำตกหรือลำธารที่มีโขดหินใหญ่ บรรยากาศดิบๆ ถ่าย MV... (หรือเว้นว่างไว้เพื่อดูทุกสถานที่)"
-                className="w-full bg-white border border-slate-300 rounded-xl p-3 text-xs sm:text-sm text-slate-900 font-bold placeholder:text-slate-500 focus:outline-none focus:border-[#0284c7] shadow-inner"
-              />
-
-              {/* Region Buttons — แถวปุ่มเลือกภาค */}
-              <div className="flex flex-wrap gap-1.5 mt-3">
-                {/* ปุ่มทุกภาค (default) */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFilterRegion("ทั้งหมด");
-                    setProvince("all");
-                    handleSearch(brief, "all");
-                  }}
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-black transition-all border ${
-                    filterRegion === "ทั้งหมด"
-                      ? "bg-[#0284c7] text-white border-[#0369a1] shadow-[1px_1px_0px_#0369a1]"
-                      : "bg-white text-slate-700 border-slate-300 hover:border-[#0284c7] hover:text-[#0284c7]"
-                  }`}
-                >
-                  <span>🌐</span>
-                  <span>ทุกภาค</span>
-                  <span className={`text-[10px] ${filterRegion === "ทั้งหมด" ? "text-sky-200" : "text-slate-400"}`}>(77)</span>
-                </button>
-
-                {/* ปุ่มแต่ละภาค */}
-                {REGION_LIST.filter((r) => r.id !== "all").map((reg) => {
-                  const regionKey = reg.id.replace("region:", "");
-                  const isActive = filterRegion === regionKey;
-                  return (
-                    <button
-                      key={reg.id}
-                      type="button"
-                      onClick={() => {
-                        setFilterRegion(regionKey);
-                        const targetProv = "region:" + regionKey;
-                        setProvince(targetProv);
-                        handleSearch(brief, targetProv);
-                      }}
-                      className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-black transition-all border ${
-                        isActive
-                          ? "bg-[#0284c7] text-white border-[#0369a1] shadow-[1px_1px_0px_#0369a1]"
-                          : "bg-white text-slate-700 border-slate-300 hover:border-[#0284c7] hover:text-[#0284c7]"
-                      }`}
-                    >
-                      <span>{reg.icon}</span>
-                      <span>
-                        {reg.name === "ภาคอีสาน (ตะวันออกเฉียงเหนือ)"
-                          ? "อีสาน"
-                          : reg.name.replace("ภาค", "")}
-                      </span>
-                      <span className={`text-[10px] ${isActive ? "text-sky-200" : "text-slate-400"}`}>
-                        ({reg.count})
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-2.5 items-center justify-between mt-3">
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <ProvinceSelector
-                    value={province}
-                    onChange={(newProv) => {
-                      setProvince(newProv);
-                      handleSearch(brief, newProv);
-                    }}
-                    allowAll={true}
-                    filterRegion={filterRegion}
-                    onFilterRegionChange={setFilterRegion}
-                  />
+              {isSidebarOpen && (
+                <div>
+                  <div className="flex items-center gap-1.5 leading-tight">
+                    <span className="font-black text-base text-white tracking-tight">
+                      Travel Location
+                    </span>
+                  </div>
+                  <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.2 rounded bg-[#d67940] text-white">
+                    Creator Space
+                  </span>
                 </div>
-
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <button
-                    onClick={() => handleSearch()}
-                    disabled={loading}
-                    className="btn btn-yellow w-full sm:w-auto px-6 py-2.5 rounded-xl font-black text-xs sm:text-sm shadow-[2px_2px_0px_#b45309]"
-                  >
-                    <Search className="w-4 h-4 text-[#78350f]" />
-                    {loading ? "กำลังค้นหา..." : "Scouting"}
-                  </button>
-                </div>
-              </div>
-
-              {/* Sample Brief Chips */}
-              <div className="mt-3 pt-2.5 border-t border-slate-200 flex flex-wrap gap-1.5 items-center">
-                <span className="text-xs font-black text-slate-600 font-mono">Quick Briefs:</span>
-                {sampleBriefs.map((s, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => {
-                      setBrief(s.text);
-                      setProvince(s.prov);
-                      handleSearch(s.text, s.prov);
-                    }}
-                    className="text-xs px-2.5 py-1 rounded-lg bg-white hover:bg-[#fffbeb] text-slate-800 border border-slate-300 hover:border-[#d97706] font-bold transition cursor-pointer shadow-sm"
-                  >
-                    {s.title}
-                  </button>
-                ))}
-              </div>
+              )}
             </div>
 
+            <button
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="p-1.5 rounded-lg text-[#ccd9e2] hover:text-white hover:bg-white/10 transition cursor-pointer"
+              title={isSidebarOpen ? "ย่อแถบข้างเป็นไอคอน" : "ขยายแถบข้าง"}
+            >
+              {isSidebarOpen ? (
+                <PanelLeftClose className="w-5 h-5" />
+              ) : (
+                <PanelLeft className="w-5 h-5" />
+              )}
+            </button>
           </div>
 
-          {/* 🎯 Toolbar เหนือการ์ด: สองกล่องหลัก ค้นหาทั้งหมด & ที่ปักหมุดไว้ (ภาษาไทย ชัดเจน) */}
-          <div className="px-3.5 py-2.5 bg-white border-[2.5px] border-[#0284c7] rounded-[20px] shadow-[4px_4px_0px_#0369a1] flex flex-wrap items-center justify-between gap-2.5">
-            <div className="flex items-center gap-2 flex-wrap">
-              {/* กล่องที่ 1: ค้นหาทั้งหมด */}
+          {/* 2. SIDEBAR MIDDLE: Nav Buttons & Collections */}
+          <div className="flex-1 overflow-y-auto p-2 sm:p-3 space-y-3">
+            {/* Primary Nav Buttons */}
+            <div className="space-y-1.5">
               <button
                 onClick={() => {
+                  setActiveCollectionId(null);
                   setActiveTab("search");
                   setFilterOnlyPinned(false);
+                  setSelectedRegion("ทั้งหมด");
+                  setSelectedProvince("all");
                 }}
-                className={`btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-black flex items-center gap-1.5 transition ${
-                  activeTab === "search" && !filterOnlyPinned
-                    ? "btn-blue shadow-[2px_2px_0px_#0369a1]"
-                    : "bg-slate-100 border-2 border-slate-300 text-slate-700 hover:bg-slate-200"
+                className={`w-full rounded-xl text-xs font-bold flex items-center transition cursor-pointer ${
+                  isSidebarOpen ? "px-3.5 py-2.5 justify-between" : "p-2.5 justify-center"
+                } ${
+                  activeTab === "search" && !filterOnlyPinned && !activeCollectionId
+                    ? "bg-[#183354] text-white shadow-sm border border-white/20"
+                    : "text-[#ccd9e2] hover:bg-white/10 hover:text-white"
                 }`}
+                title="ค้นหาและค้นพบ"
               >
-                <Search className="w-4 h-4" />
-                <span>ค้นหาทั้งหมด</span>
-                <span className={`px-2 py-0.5 rounded-full text-xs font-mono font-bold ${
-                  activeTab === "search" && !filterOnlyPinned
-                    ? "bg-white/30 text-white"
-                    : "bg-slate-200 text-slate-800"
-                }`}>
-                  {results.length}
-                </span>
+                <div className="flex items-center gap-2.5">
+                  <Search className="w-4 h-4 text-[#d67940] shrink-0" />
+                  {isSidebarOpen && <span>ค้นหาและค้นพบ</span>}
+                </div>
+                {isSidebarOpen && (
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-mono font-bold ${
+                    activeTab === "search" && !filterOnlyPinned && !activeCollectionId
+                      ? "bg-[#d67940] text-white"
+                      : "bg-white/10 text-[#ccd9e2]"
+                  }`}>
+                    {results.length}
+                  </span>
+                )}
               </button>
 
-              {/* กล่องที่ 2: ที่เซฟ/ปักหมุดไว้ (Saved / Scouting List) */}
               <button
                 onClick={() => {
                   setActiveCollectionId(null);
                   setActiveTab("scout");
                   setFilterOnlyPinned(true);
+                  setSelectedRegion("ทั้งหมด");
+                  setSelectedProvince("all");
                 }}
-                className={`btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-black flex items-center gap-1.5 transition ${
-                  (activeTab === "scout" || filterOnlyPinned) && !activeCollectionId
-                    ? "btn-mint shadow-[2px_2px_0px_#15803d]"
-                    : scoutingList.length > 0
-                    ? "bg-white border-2 border-emerald-500 text-emerald-800 hover:bg-emerald-50 shadow-[2px_2px_0px_#15803d]"
-                    : "bg-slate-100 border-2 border-slate-300 text-slate-400 opacity-60"
+                className={`w-full rounded-xl text-xs font-bold flex items-center transition cursor-pointer ${
+                  isSidebarOpen ? "px-3.5 py-2.5 justify-between" : "p-2.5 justify-center"
+                } ${
+                  filterOnlyPinned && !activeCollectionId
+                    ? "bg-[#183354] text-white shadow-sm border border-white/20"
+                    : "text-[#ccd9e2] hover:bg-white/10 hover:text-white"
                 }`}
+                title="ปักหมุดที่สนใจ"
               >
-                <span>📌 ที่ปักหมุดไว้ ({scoutingList.length})</span>
-                {scoutingList.length > 0 && (
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping inline-block" />
+                <div className="flex items-center gap-2.5">
+                  <Bookmark className="w-4 h-4 text-[#d67940] shrink-0" />
+                  {isSidebarOpen && <span>ปักหมุดที่สนใจ</span>}
+                </div>
+                {isSidebarOpen && (
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-mono font-bold ${
+                    filterOnlyPinned && !activeCollectionId
+                      ? "bg-[#d67940] text-white"
+                      : "bg-white/10 text-[#ccd9e2]"
+                  }`}>
+                    {scoutingList.length}
+                  </span>
                 )}
               </button>
+            </div>
 
-              {/* กล่องที่ 3: เปิดดูคลัง Collections */}
-              <button
-                onClick={() => setIsCollectionsModalOpen(true)}
-                className={`btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-black flex items-center gap-1.5 transition ${
-                  activeCollectionId
-                    ? "bg-[#285185] text-white shadow-[2px_2px_0px_#183354]"
-                    : "bg-white border-2 border-[#285185] text-[#285185] hover:bg-[#f0f5f8] shadow-[2px_2px_0px_#183354]"
-                }`}
-              >
-                <Folder className="w-4 h-4 text-amber-500 fill-amber-500/30" />
-                <span>
-                  {activeCollectionId
-                    ? `📁 กล่อง: ${collections.find((c) => c.id === activeCollectionId)?.name}`
-                    : `📁 จัดการคลังเซฟ (${collections.length})`}
-                </span>
-              </button>
+            {/* 📁 Collections Section */}
+            <div className="pt-2.5 border-t border-white/10">
+              {isSidebarOpen ? (
+                <>
+                  <div className="flex items-center justify-between px-1 mb-2">
+                    <span className="text-[11px] font-black uppercase tracking-wider text-[#ccd9e2] flex items-center gap-1.5">
+                      <Folder className="w-3.5 h-3.5 text-[#d67940]" />
+                      คลัง Collections
+                    </span>
+                    <button
+                      onClick={() => setIsCollectionsModalOpen(true)}
+                      className="text-[11px] font-bold text-white hover:underline bg-white/15 px-2 py-0.5 rounded-md hover:bg-white/25 transition cursor-pointer"
+                    >
+                      จัดการ
+                    </button>
+                  </div>
 
-              {/* ปุ่มล้างหมุด / ยกเลิกฟิลเตอร์กล่อง */}
-              {activeCollectionId ? (
-                <button
-                  onClick={() => setActiveCollectionId(null)}
-                  className="btn text-xs px-2.5 py-1.5 rounded-xl font-black bg-slate-100 hover:bg-slate-200 border-2 border-slate-300 text-slate-700 transition"
-                  title="ดูทุกรายการปักหมุด"
-                >
-                  ✕ ดูทั้งหมด
-                </button>
-              ) : scoutingList.length > 0 && (
-                <button
-                  onClick={handleClearScout}
-                  className="btn text-xs px-2.5 py-1.5 rounded-xl font-black bg-rose-50 hover:bg-rose-100 border-2 border-rose-300 text-rose-700 shadow-[2px_2px_0px_#fca5a5] flex items-center gap-1 transition"
-                  title="ล้างสถานที่ที่เซฟไว้ทั้งหมด"
-                >
-                  <span>🗑️ ล้างที่เซฟไว้</span>
-                </button>
+                  <div className="space-y-1">
+                    {collections.map((col) => {
+                      const isColActive = activeCollectionId === col.id;
+                      return (
+                        <button
+                          key={col.id}
+                          onClick={() => {
+                            setActiveCollectionId(col.id);
+                            setActiveTab("collection");
+                            setFilterOnlyPinned(false);
+                            handleDeselect();
+                            setSelectedRegion("ทั้งหมด");
+                            setSelectedProvince("all");
+                          }}
+                          className={`w-full px-3 py-2 rounded-xl text-xs font-bold text-left flex items-center justify-between transition cursor-pointer ${
+                            isColActive
+                              ? "bg-[#183354] text-white font-black border border-[#d67940]"
+                              : "text-[#ccd9e2] hover:bg-white/10 hover:text-white"
+                          }`}
+                        >
+                          <div className="truncate flex items-center gap-2">
+                            <span>📁</span>
+                            <span className="truncate">{col.name}</span>
+                          </div>
+                          <span className="text-[11px] font-mono text-white bg-white/20 px-1.5 py-0.5 rounded-md">
+                            {col.locations.length}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : (
+                <div className="flex justify-center">
+                  <button
+                    onClick={() => setIsCollectionsModalOpen(true)}
+                    className="p-2.5 rounded-xl hover:bg-white/10 text-[#ccd9e2] hover:text-white transition"
+                    title={`คลัง Collections (${collections.length})`}
+                  >
+                    <Folder className="w-4 h-4 text-[#d67940]" />
+                  </button>
+                </div>
               )}
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-500 hidden sm:inline">
-                {province !== "all" && !province.startsWith("region:") 
-                  ? `ครบทุกพิกัดใน ${province}` 
-                  : `ฐานข้อมูล ททท. ${totalDbMatches.toLocaleString()} พิกัด`}
-              </span>
-              <div className="font-mono text-xs sm:text-sm text-[#0284c7] font-black bg-[#f0f9ff] px-2.5 py-1 rounded-lg border border-[#bae6fd]">
-                แสดง {displayedLocations.length} โลเคชัน
+            {/* Simulated Data Status Box (เฉพาะตอนกางออก) */}
+            {isSidebarOpen && (
+              <div className="p-3 rounded-2xl bg-[#183354]/70 border border-white/10 text-[11px] text-[#ccd9e2] leading-relaxed">
+                <div className="font-bold text-white flex items-center gap-1 mb-1">
+                  <span>🛡️</span> TAT Ground Truth 100%
+                </div>
+                ฐานข้อมูล ททท. 8,628 พิกัดจริง ตรวจสอบระเบียบการถ่ายทำเรียบร้อย
               </div>
-            </div>
+            )}
           </div>
 
-          {/* Gemini AI Scouting Agent Card */}
-          {geminiAnalysis && (
-            <div className="bg-gradient-to-r from-sky-50 via-indigo-50 to-purple-50 border-[2.5px] border-indigo-300 rounded-[20px] p-4 shadow-[4px_4px_0px_#818cf8] mb-4">
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-600 text-white font-black text-xs shadow-sm">
-                    ✨
-                  </span>
-                  <span className="font-black text-sm text-indigo-950">Gemini 3.5 Flash Lite Creative Scouting Agent</span>
-                  <span className="text-[10px] uppercase font-mono tracking-wider font-extrabold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full border border-indigo-200">
-                    AI Deconstructed
-                  </span>
-                </div>
+          {/* 3. SIDEBAR BOTTOM: User Profile + Logout Button */}
+          <div className={`p-2.5 border-t border-white/10 bg-[#183354]/50 flex items-center shrink-0 ${
+            isSidebarOpen ? "justify-between gap-2" : "justify-center flex-col gap-2"
+          }`}>
+            <div 
+              onClick={() => !isSidebarOpen && setIsSidebarOpen(true)}
+              className="flex items-center gap-2 truncate cursor-pointer"
+              title={currentUser?.name}
+            >
+              <div className="w-8 h-8 rounded-xl bg-[#d67940] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
+                {currentUser?.avatar || currentUser?.name.charAt(0) || "U"}
               </div>
-
-              {geminiAnalysis.mood && (
-                <div className="text-xs font-bold text-slate-800 mb-1.5 flex items-start gap-1.5">
-                  <span className="text-indigo-600 font-extrabold shrink-0">🎬 Mood & Tone:</span>
-                  <span>{geminiAnalysis.mood}</span>
-                </div>
-              )}
-
-              {geminiAnalysis.directorTip && (
-                <div className="text-xs font-bold text-slate-700 mb-2.5 flex items-start gap-1.5">
-                  <span className="text-amber-600 font-extrabold shrink-0">💡 คำแนะนำผู้กำกับ:</span>
-                  <span>{geminiAnalysis.directorTip}</span>
-                </div>
-              )}
-
-              {geminiAnalysis.expandedKeywords && geminiAnalysis.expandedKeywords.length > 0 && (
-                <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-indigo-100">
-                  <span className="text-[11px] font-bold text-indigo-600 mr-1">🔍 คีย์เวิร์ดภูมิประเทศที่ AI ถอดรหัส:</span>
-                  {geminiAnalysis.expandedKeywords.map((kw: string, i: number) => (
-                    <span key={i} className="text-[11px] font-black px-2 py-0.5 bg-white text-indigo-700 border border-indigo-200 rounded-md shadow-xs">
-                      #{kw}
-                    </span>
-                  ))}
+              {isSidebarOpen && (
+                <div className="truncate text-left">
+                  <div className="text-xs font-bold text-white truncate leading-tight">
+                    {currentUser?.name || "ผู้ใช้งาน"}
+                  </div>
+                  <div className="text-[10px] text-[#ccd9e2] font-mono truncate">
+                    🎬 Creator / กองถ่าย
+                  </div>
                 </div>
               )}
             </div>
-          )}
 
-          {/* Location Cards Grid (ทำเป็นช่องๆ 2 คอลัมน์ตามที่ขอ) */}
-          {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-pulse">
-              {[1, 2, 3, 4].map((n) => (
-                <div key={n} className="h-56 bg-slate-200 rounded-[20px] border-2 border-slate-300" />
-              ))}
-            </div>
-          ) : displayedLocations.length === 0 ? (
-            <div className="text-center py-16 bg-white rounded-[22px] border-[2.5px] border-dashed border-[#0284c7] p-8">
-              <Clapperboard className="w-12 h-12 text-[#0284c7] mx-auto mb-2 opacity-40" />
-              <p className="text-slate-900 font-black text-base">
-                {activeCollectionId
-                  ? `ยังไม่มีสถานที่ในกล่อง "${collections.find((c) => c.id === activeCollectionId)?.name}"`
-                  : filterOnlyPinned 
-                  ? "ยังไม่มีสถานที่ที่ปักหมุดไว้" 
-                  : activeTab === "search" 
-                  ? "ไม่พบโลเคชันที่ตรงเงื่อนไข" 
-                  : "ยังไม่มีสถานที่ใน Recce Board"}
-              </p>
-              <p className="text-xs font-bold text-slate-500 mt-1 mb-4">
-                {activeCollectionId
-                  ? "กดปุ่ม 'เซฟเข้ากล่อง' จากการ์ดเพื่อนำสถานที่เข้ามาจัดเก็บในกล่องนี้"
-                  : filterOnlyPinned
-                  ? "กดปุ่ม '+ ปักหมุด' จากการ์ดหรือแผนที่เพื่อเลือกสถานที่เข้าลิสต์"
-                  : activeTab === "search" 
-                  ? "ลองปรับเปลี่ยนคำค้นหา หรือเลือกจังหวัดอื่นๆ ดูครับ" 
-                  : "กดปุ่ม '+ ปักหมุด' ในหน้าค้นหา เพื่อเพิ่มสถานที่สำหรับออกกอง"}
-              </p>
-              {(activeTab === "scout" || filterOnlyPinned || activeCollectionId) && (
-                <button
-                  onClick={() => {
-                    setActiveCollectionId(null);
-                    setActiveTab("search");
-                    setFilterOnlyPinned(false);
-                  }}
-                  className="btn btn-blue text-xs px-4 py-2 rounded-xl font-black"
-                >
-                  กลับไปค้นหาโลเคชันทั้งหมด
-                </button>
-              )}
-            </div>
-          ) : (
-            <>
-              <div ref={cardsTopRef} className="scroll-mt-4" />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {displayedLocations.map((loc) => {
-                  const isSaved = scoutingList.some((x) => x.id === loc.id);
-                  const isSelected = selectedLocation?.id === loc.id;
-                  const recceIndex = scoutingList.findIndex((x) => x.id === loc.id);
+            <button
+              onClick={handleLogout}
+              className="p-2 rounded-xl text-[#ccd9e2] hover:text-rose-400 hover:bg-white/10 transition cursor-pointer shrink-0"
+              title="ออกจากระบบ"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        </aside>
 
-                  return (
-                    <div
-                      key={loc.id}
-                      onClick={() => handleSelectFromCard(loc)}
-                      className={`rounded-[22px] p-4 sm:p-5 transition-all duration-200 cursor-pointer flex flex-col justify-between border-[3px] ${
-                        isSelected
-                          ? "bg-gradient-to-br from-amber-50/90 via-white to-sky-50/70 border-[#d67940] shadow-[6px_6px_0px_#a8521d] ring-4 ring-amber-200 scale-[1.01]"
-                          : "bg-white border-[#285185] shadow-[3px_3px_0px_#183354] hover:translate-x-[-2px] hover:translate-y-[-2px]"
-                      }`}
-                    >
-                      <div>
-                        {/* Top Badges */}
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-[#ccd9e2] text-[#1b3558] border-[1.5px] border-[#285185]">
-                            {loc.category || "สถานที่ท่องเที่ยว"}
-                          </span>
-
-                          {loc.relevanceScore && (
-                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#fdf3eb] text-[#a8521d] border-[1.5px] border-[#d67940]">
-                              Match {loc.relevanceScore}%
-                            </span>
-                          )}
-                        </div>
-
-                        {recceIndex !== -1 && (
-                          <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#bbf7d0] text-[#14532d] border border-[#16a34a] flex items-center gap-0.5 shrink-0">
-                            🎬 จุดที่ {recceIndex + 1}
-                          </span>
-                        )}
+        {/* 💻 MAIN SCREEN: Split into 3 columns (Left 2 parts for Controls & Cards + Right 1 part for Fixed Map) */}
+        <main className="flex-1 flex flex-col lg:grid lg:grid-cols-3 h-full overflow-hidden relative">
+          
+          {/* === 2 PARTS LEFT: Search, Filters, Creative Brief & 3-Column Results Grid === */}
+          <div className={`lg:col-span-2 overflow-y-auto p-4 sm:p-6 space-y-4 border-r border-[#ccd9e2]/60 transition-all duration-200 ${
+            ragTargetLocation || socialModalLocation ? "blur-xs opacity-60 pointer-events-none" : ""
+          }`}>
+            
+            {/* Header: Title & Collection Indicator */}
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <span className="text-[11px] font-black uppercase tracking-wider text-[#d67940]">
+                  {activeCollectionId ? "COLLECTION WORKSPACE" : filterOnlyPinned || activeTab === "scout" ? "PINNED WORKSPACE" : "CREATOR WORKSPACE"}
+                </span>
+                
+                {activeCollectionId ? (
+                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                    {isEditingActiveColName ? (
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="text"
+                          value={editingActiveColName}
+                          onChange={(e) => setEditingActiveColName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              if (editingActiveColName.trim()) {
+                                handleRenameCollection(activeCollectionId, editingActiveColName.trim());
+                              }
+                              setIsEditingActiveColName(false);
+                            } else if (e.key === "Escape") {
+                              setIsEditingActiveColName(false);
+                            }
+                          }}
+                          autoFocus
+                          className="text-xl sm:text-2xl font-black text-[#1b3558] bg-white border-2 border-[#285185] rounded-xl px-2.5 py-1 focus:outline-none"
+                        />
+                        <button
+                          onClick={() => {
+                            if (editingActiveColName.trim()) {
+                              handleRenameCollection(activeCollectionId, editingActiveColName.trim());
+                            }
+                            setIsEditingActiveColName(false);
+                          }}
+                          className="p-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition cursor-pointer"
+                          title="บันทึกชื่อ"
+                        >
+                          <Check className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => setIsEditingActiveColName(false)}
+                          className="p-1.5 rounded-lg bg-slate-200 text-slate-700 hover:bg-slate-300 transition cursor-pointer"
+                          title="ยกเลิก"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
                       </div>
-
-                      <h3 className="text-base sm:text-lg font-black text-slate-950 mb-0.5 line-clamp-1">
-                        {loc.name_th}
-                      </h3>
-
-                      <p className="text-xs sm:text-sm font-bold text-slate-700 mb-2.5 flex items-center gap-1">
-                        📍 {loc.province} {loc.district ? `• อ.${loc.district}` : ""}
-                      </p>
-
-                      {loc.hilight && (
-                        <div className="text-xs sm:text-sm bg-[#fff7ed] border border-[#fcd9bd] p-2.5 rounded-xl text-[#7c2d12] font-semibold mb-2.5 leading-relaxed">
-                          ✨ <strong className="font-black text-[#431407]">จุดเด่น:</strong> {loc.hilight}
-                        </div>
-                      )}
-
-                      {loc.detail && (
-                        <div className="mb-3 bg-slate-50 border border-slate-200 p-2.5 rounded-xl">
-                          <p className={`text-xs sm:text-sm text-slate-800 font-medium leading-relaxed ${expandedIds[loc.id] ? "" : "line-clamp-2"}`}>
-                            {loc.detail}
-                          </p>
-                          {loc.detail.length > 80 && (
+                    ) : (
+                      <div className="flex items-center gap-2.5 flex-wrap">
+                        <h1 className="text-2xl sm:text-3xl font-black text-[#1b3558] tracking-tight truncate">
+                          📁 {collections.find((c) => c.id === activeCollectionId)?.name || "กล่องคลัง"}
+                        </h1>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => {
+                              const currentName = collections.find((c) => c.id === activeCollectionId)?.name || "";
+                              setEditingActiveColName(currentName);
+                              setIsEditingActiveColName(true);
+                            }}
+                            className="p-1.5 rounded-xl border border-slate-300 bg-white hover:border-[#285185] hover:bg-[#ccd9e2]/30 text-slate-600 hover:text-[#285185] transition cursor-pointer"
+                            title="แก้ไขชื่อคลังนี้"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          {activeCollectionId !== "default" && (
                             <button
-                              type="button"
-                              onClick={(e) => toggleExpand(loc.id, e)}
-                              className="text-xs font-black text-[#7c3aed] hover:text-[#5b21b6] hover:underline mt-1.5 inline-flex items-center gap-0.5 cursor-pointer"
+                              onClick={() => {
+                                const currentCol = collections.find((c) => c.id === activeCollectionId);
+                                if (confirm(`คุณต้องการลบกล่องคลัง "${currentCol?.name}" ใช่หรือไม่?`)) {
+                                  handleDeleteCollection(activeCollectionId);
+                                }
+                              }}
+                              className="p-1.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 transition cursor-pointer"
+                              title="ลบคลังนี้"
                             >
-                              {expandedIds[loc.id] ? "« ย่อข้อความ" : "อ่านต่อเต็มๆ »"}
+                              <Trash2 className="w-4 h-4" />
                             </button>
                           )}
                         </div>
-                      )}
-
-                      {/* Technical Specs */}
-                      <div className="space-y-1.5 text-xs sm:text-sm text-slate-800 font-medium mb-3.5">
-                        <div className="flex items-center gap-1.5">
-                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                          <span className="font-semibold">GPS: {loc.lat ? `${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)}` : "ระบุในเขต"}</span>
-                        </div>
-                        {/* Phone */}
-                        <div className="flex items-center gap-1.5">
-                          <Phone className={`w-4 h-4 shrink-0 ${loc.tel ? "text-amber-600" : "text-slate-400"}`} />
-                          <span className="font-bold text-slate-700 text-xs">โทร:</span>
-                          {loc.tel ? (
-                            <a 
-                              href={`tel:${loc.tel.replace(/[^0-9]/g, "")}`}
-                              onClick={(e) => e.stopPropagation()}
-                              className="font-mono font-bold text-amber-800 hover:underline text-xs"
-                              title="คลิกเพื่อโทรออก"
-                            >
-                              {loc.tel}
-                            </a>
-                          ) : (
-                            <span className="font-mono font-bold text-slate-400 text-xs">-</span>
-                          )}
-                        </div>
-
-                        {/* Email Contact */}
-                        <div className="flex items-center gap-1.5">
-                          <Mail className={`w-4 h-4 shrink-0 ${(loc.email || loc.productionSpecs?.email) ? "text-sky-600" : "text-slate-400"}`} />
-                          <span className="font-bold text-slate-700 text-xs">อีเมล:</span>
-                          {(loc.email || loc.productionSpecs?.email) ? (
-                            <a
-                              href={`mailto:${loc.email || loc.productionSpecs?.email}?subject=${encodeURIComponent(`ขออนุญาตถ่ายทำภาพยนตร์/โฆษณา: ${loc.name_th} (${loc.province})`)}&body=${encodeURIComponent(`เรียน ผู้ดูแลสถานที่ ${loc.name_th} (${loc.province})\n\nข้าพเจ้าในนามกองถ่าย/ผู้ผลิต มีความประสงค์จะสอบถามขั้นตอนและขออนุญาตใช้สถานที่ถ่ายทำ...\n\nสถานที่: ${loc.name_th}\nจังหวัด: ${loc.province}\n\nจึงเรียนมาเพื่อโปรดพิจารณา`)}`}
-                              onClick={(e) => e.stopPropagation()}
-                              className="font-mono font-bold text-sky-700 hover:text-sky-950 hover:underline truncate text-xs"
-                              title="คลิกเพื่อเปิดอีเมลร่างจดหมายขออนุญาตถ่ายทำ"
-                            >
-                              {loc.email || loc.productionSpecs?.email}
-                            </a>
-                          ) : (
-                            <span className="font-mono font-bold text-slate-400 text-xs">-</span>
-                          )}
-                        </div>
-
-                        {/* Facebook Page */}
-                        <div className="flex items-center gap-1.5">
-                          <svg
-                            className="w-4 h-4 text-[#1877F2] shrink-0 fill-current"
-                            style={{ width: "16px", height: "16px", maxWidth: "16px", maxHeight: "16px", flexShrink: 0 }}
-                            viewBox="0 0 24 24"
-                          >
-                            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                          </svg>
-                          <a
-                            href={`https://www.facebook.com/search/top?q=${encodeURIComponent(loc.name_th + ' ' + loc.province)}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="font-bold text-[#1877F2] hover:text-blue-900 hover:underline flex items-center gap-1 truncate"
-                            title="ค้นหาเพจ Facebook ของสถานที่"
-                          >
-                            <span>Facebook: เพจ {loc.name_th} ↗</span>
-                          </a>
-                        </div>
-
-                        {/* Permit Caution Badge */}
-                        <div className="bg-[#fff1f2] border border-[#fecdd3] p-2 rounded-xl text-xs text-[#881337] font-semibold flex items-start gap-1.5 mt-2">
-                          <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                          <span className="line-clamp-2">
-                            <strong className="font-black text-rose-900">การขออนุญาต:</strong> ฐานข้อมูล ททท. ไม่ระบุระเบียบค่าธรรมเนียม โปรดโทรติดต่อเบอร์ทางการล่วงหน้า
-                          </span>
-                        </div>
                       </div>
-                    </div>
-
-                    {/* Footer Actions */}
-                    <div className="pt-3 border-t border-slate-200 flex items-center justify-between gap-2 flex-wrap">
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSelectFromCard(loc);
-                          }}
-                          className={`btn text-xs sm:text-sm px-3 py-1.5 rounded-xl font-black flex items-center gap-1.5 ${
-                            isSelected ? "btn-blue" : "bg-slate-100 border-slate-300 text-slate-800 hover:bg-slate-200"
-                          }`}
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                          {isSelected ? "กำลังชี้เป้า" : "ดูบนแผนที่"}
-                        </button>
-
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setRagTargetLocation(loc);
-                          }}
-                          className="btn bg-[#f0f5f8] border-2 border-[#285185] text-[#1b3558] hover:bg-[#ccd9e2] text-xs sm:text-sm px-3 py-1.5 rounded-xl font-black flex items-center gap-1.5 shadow-[2px_2px_0px_#183354]"
-                          title="เปิด AI RAG วิเคราะห์มุมกล้อง ระเบียบ และถามตอบเจาะลึก"
-                        >
-                          <Sparkles className="w-3.5 h-3.5 text-[#d67940]" />
-                          AI RAG
-                        </button>
-
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSocialModalLocation(loc);
-                          }}
-                          className="btn bg-[#fff7ed] hover:bg-[#ffedd5] border-2 border-[#ea580c] text-[#9a3412] text-xs sm:text-sm px-3 py-1.5 rounded-xl font-black flex items-center gap-1.5 shadow-[2px_2px_0px_#c2410c]"
-                          title="ดูรูปภาพจริงจาก Google Maps และคลิปสำรวจสถานที่"
-                        >
-                          <span>📸 รูป Google Maps</span>
-                        </button>
-                      </div>
-
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setAddToCollectionTarget(loc);
-                          }}
-                          className="btn text-xs sm:text-sm px-2.5 py-1.5 rounded-xl font-black bg-[#f0f5f8] border-2 border-[#285185] text-[#1b3558] hover:bg-[#ccd9e2] shadow-[2px_2px_0px_#183354] flex items-center gap-1"
-                          title="บันทึกเข้ากล่อง Collection"
-                        >
-                          <FolderPlus className="w-3.5 h-3.5 text-[#285185]" />
-                          <span className="hidden sm:inline">เข้ากล่อง</span>
-                        </button>
-
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleScout(loc);
-                          }}
-                          className={`btn text-xs sm:text-sm px-3.5 py-1.5 rounded-xl font-black ${
-                            isSaved 
-                              ? "bg-[#edd8d8] border-[#6f4849] text-[#4a2829] shadow-[2px_2px_0px_#4d2f30]" 
-                              : "bg-[#285185] hover:bg-[#1b3558] border-2 border-[#183354] text-white shadow-[2px_2px_0px_#183354]"
-                          }`}
-                        >
-                          {isSaved ? "✓ ปักแล้ว" : "+ ปักหมุด"}
-                        </button>
-                      </div>
-                    </div>
+                    )}
                   </div>
-                );
-              })}
+                ) : (
+                  <h1 className="text-2xl sm:text-3xl font-black text-[#1b3558] tracking-tight">
+                    {filterOnlyPinned || activeTab === "scout" ? "รายการที่ปักหมุดไว้" : "ค้นหาโลเคชันที่ใช่"}
+                  </h1>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                {activeCollectionId && (
+                  <button
+                    onClick={() => {
+                      setActiveCollectionId(null);
+                      setActiveTab("search");
+                      setFilterOnlyPinned(false);
+                      setIsEditingActiveColName(false);
+                      handleDeselect();
+                      setSelectedRegion("ทั้งหมด");
+                      setSelectedProvince("all");
+                    }}
+                    className="flex items-center gap-1.5 bg-[#ccd9e2]/80 hover:bg-[#ccd9e2] border border-[#285185] px-3 py-1.5 rounded-xl text-xs font-bold text-[#1b3558] transition cursor-pointer"
+                    title="ออกจากมุมมองคลัง"
+                  >
+                    <span>← กลับหน้าหลัก</span>
+                  </button>
+                )}
+              </div>
             </div>
 
-            {/* Load More Button */}
-            {displayedLocations.length < totalDbMatches && activeTab === "search" && !filterOnlyPinned && (
-              <div className="text-center py-6">
-                <button
-                  onClick={handleLoadMore}
-                  disabled={loading}
-                  className="btn btn-blue text-xs sm:text-sm px-6 py-2.5 rounded-xl font-black shadow-[3px_3px_0px_#0369a1] hover:scale-[1.02] active:scale-95 transition"
-                >
-                  {loading ? "กำลังค้นหาและดึงข้อมูล..." : `+ โหลดโลเคชันเพิ่มอีก (+200) (จากทั้งหมด ${totalDbMatches.toLocaleString()} พิกัด)`}
-                </button>
+            {/* 🔍 Search Box or Pinned Filter Box (หน้าปักหมุดตัดช่องค้นหาออก เหลือเฉพาะตัวกรองภาค/จังหวัด) */}
+            <div className="bg-white border-2 border-[#285185] rounded-2xl p-4 sm:p-5 shadow-[4px_4px_0px_#183354] space-y-3">
+              
+              {/* Only show Search input in Discovery/Search mode */}
+              {!filterOnlyPinned && activeTab !== "scout" && (
+                <>
+                  <label className="block text-xs font-black text-slate-800">
+                    เริ่มจากค้นหาสถานที่ หรือพิมพ์ Creative Brief เพื่อเช็คข้อมูลก่อนวางแผน
+                  </label>
+
+                  {/* Text Search Input with Big Search Button */}
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        value={brief}
+                        onChange={(e) => setBrief(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            handleSearch(brief, selectedRegion, selectedProvince);
+                          }
+                        }}
+                        placeholder="พิมพ์ชื่อสถานที่, บรรยากาศฉาก เช่น น้ำตกหิน, คาเฟ่ริมน้ำ, วิวเมืองกลางคืน..."
+                        className="w-full bg-[#f8fafc] border border-slate-300 rounded-xl pl-10 pr-4 py-2.5 text-xs sm:text-sm text-slate-900 font-bold focus:outline-none focus:border-[#285185] focus:bg-white transition"
+                      />
+                      {brief && (
+                        <button
+                          onClick={() => {
+                            setBrief("");
+                            handleSearch("", selectedRegion, selectedProvince);
+                          }}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 font-black text-xs"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={() => handleSearch(brief, selectedRegion, selectedProvince)}
+                      disabled={loading}
+                      className="px-6 py-2.5 rounded-xl bg-[#285185] hover:bg-[#1b3558] text-white font-black text-xs sm:text-sm shadow-[2px_2px_0px_#183354] transition cursor-pointer shrink-0 flex items-center gap-1.5"
+                    >
+                      <Search className="w-4 h-4" />
+                      <span>{loading ? "กำลังค้น..." : "ค้นหา"}</span>
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* 🗺️ Level 1 Filter: Region Chips (ระดับบนสุดเป็นภาค) */}
+              <div className="pt-2 border-t border-slate-100">
+                <div className="text-[11px] font-black text-slate-500 mb-1.5 flex items-center justify-between">
+                  <span>เลือกดูรายภาค:</span>
+                  {selectedRegion !== "ทั้งหมด" && (
+                    <button
+                      onClick={() => {
+                        setSelectedRegion("ทั้งหมด");
+                        setSelectedProvince("all");
+                        if (!filterOnlyPinned && activeTab !== "scout") {
+                          handleSearch(brief, "ทั้งหมด", "all");
+                        }
+                      }}
+                      className="text-[#d67940] hover:underline font-bold text-[10px] cursor-pointer"
+                    >
+                      ✕ ดูทุกภาค
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedRegion("ทั้งหมด");
+                      setSelectedProvince("all");
+                      if (!filterOnlyPinned && activeTab !== "scout") {
+                        handleSearch(brief, "ทั้งหมด", "all");
+                      }
+                    }}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition border cursor-pointer ${
+                      selectedRegion === "ทั้งหมด"
+                        ? "bg-[#285185] text-white border-[#285185] shadow-xs"
+                        : "bg-white text-slate-700 border-slate-200 hover:border-[#285185]"
+                    }`}
+                  >
+                    🌐 ทั่วประเทศ {filterOnlyPinned || activeTab === "scout" ? `(${scoutingList.length})` : "(77)"}
+                  </button>
+
+                  {REGION_LIST.filter((r) => r.id !== "all").map((reg) => {
+                    const regName = reg.id.replace("region:", "");
+                    const isRegActive = selectedRegion === regName;
+                    
+                    // In pinned mode, count how many pinned places are in this region
+                    const pinnedCountInReg = scoutingList.filter((loc) => {
+                      const p = THAI_PROVINCES.find((x) => x.name === loc.province);
+                      return p && p.region === regName;
+                    }).length;
+
+                    const countDisplay = filterOnlyPinned || activeTab === "scout" ? pinnedCountInReg : reg.count;
+
+                    return (
+                      <button
+                        key={reg.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedRegion(regName);
+                          setSelectedProvince("all");
+                          if (!filterOnlyPinned && activeTab !== "scout") {
+                            handleSearch(brief, regName, "all");
+                          }
+                        }}
+                        className={`px-3 py-1 rounded-lg text-xs font-bold transition border flex items-center gap-1 cursor-pointer ${
+                          isRegActive
+                            ? "bg-[#285185] text-white border-[#285185] shadow-xs"
+                            : "bg-white text-slate-700 border-slate-200 hover:border-[#285185]"
+                        }`}
+                      >
+                        <span>{reg.icon}</span>
+                        <span>{regName.replace("ภาค", "")}</span>
+                        <span className={`text-[10px] ${isRegActive ? "text-[#ccd9e2]" : "text-slate-400"}`}>
+                          ({countDisplay})
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 📍 Level 2 Filter: Break down provinces under selected region (แตกจังหวัดออกมาของภาคนั้น) */}
+              {selectedRegion !== "ทั้งหมด" && (
+                <div className="pt-2 border-t border-slate-100 bg-[#f0f5f8] p-3 rounded-xl border border-[#ccd9e2]">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[11px] font-black text-[#1b3558] flex items-center gap-1">
+                      <MapPin className="w-3.5 h-3.5 text-[#d67940]" />
+                      จังหวัดใน{selectedRegion}:
+                    </span>
+                    {selectedProvince !== "all" && (
+                      <button
+                        onClick={() => {
+                          setSelectedProvince("all");
+                          if (!filterOnlyPinned && activeTab !== "scout") {
+                            handleSearch(brief, selectedRegion, "all");
+                          }
+                        }}
+                        className="text-xs text-[#d67940] hover:underline font-bold cursor-pointer"
+                      >
+                        ดูทุกจังหวัดในภาคนี้
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pr-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedProvince("all");
+                        if (!filterOnlyPinned && activeTab !== "scout") {
+                          handleSearch(brief, selectedRegion, "all");
+                        }
+                      }}
+                      className={`px-2.5 py-0.5 rounded-md text-[11px] font-bold border transition cursor-pointer ${
+                        selectedProvince === "all"
+                          ? "bg-[#d67940] text-white border-[#d67940]"
+                          : "bg-white text-slate-700 border-slate-200 hover:border-[#d67940]"
+                      }`}
+                    >
+                      ทั้งหมดในภาค
+                    </button>
+
+                    {(filterOnlyPinned || activeTab === "scout" 
+                      ? pinnedProvincesInSelectedRegion 
+                      : provincesInSelectedRegion.map((p) => p.name)
+                    ).map((provName) => {
+                      const isProvActive = selectedProvince === provName;
+                      return (
+                        <button
+                          key={provName}
+                          type="button"
+                          onClick={() => {
+                            setSelectedProvince(provName);
+                            if (!filterOnlyPinned && activeTab !== "scout") {
+                              handleSearch(brief, selectedRegion, provName);
+                            }
+                          }}
+                          className={`px-2.5 py-0.5 rounded-md text-[11px] font-bold border transition cursor-pointer ${
+                            isProvActive
+                              ? "bg-[#d67940] text-white border-[#d67940]"
+                              : "bg-white text-slate-700 border-slate-200 hover:border-[#d67940]"
+                          }`}
+                        >
+                          {provName}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Status and Count Header */}
+              <div className="flex items-center justify-between text-xs font-bold text-slate-500 pt-1 flex-wrap gap-2">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div>
+                    {activeCollectionId ? (
+                      <>
+                        สถานที่ในกล่องนี้{" "}
+                        <strong className="text-[#285185] font-black">
+                          {displayedLocations.length}
+                        </strong>{" "}
+                        แห่ง
+                      </>
+                    ) : filterOnlyPinned || activeTab === "scout" ? (
+                      <>
+                        ปักหมุดตรงเงื่อนไข{" "}
+                        <strong className="text-[#285185] font-black">
+                          {displayedLocations.length}
+                        </strong>{" "}
+                        จากที่ปักไว้ทั้งหมด {scoutingList.length} แห่ง
+                      </>
+                    ) : (
+                      <>
+                        ผลการค้นหา{" "}
+                        <strong className="text-[#285185] font-black">
+                          {displayedLocations.length}
+                        </strong>{" "}
+                        จาก {totalDbMatches.toLocaleString()} แห่ง
+                      </>
+                    )}
+                  </div>
+
+                  {/* ปุ่มแอดทั้งหมดเข้าคลัง (แสดงเมื่ออยู่ในหน้าปักหมุดที่สนใจและมีสถานที่ที่ปักหมุดไว้) */}
+                  {(filterOnlyPinned || activeTab === "scout") && !activeCollectionId && displayedLocations.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setAddToCollectionTarget(displayedLocations)}
+                      className="px-3 py-1 rounded-xl bg-[#285185] hover:bg-[#1b3558] text-white text-[11px] font-black flex items-center gap-1.5 shadow-[2px_2px_0px_#183354] transition cursor-pointer"
+                      title="บันทึกสถานที่ที่แสดงอยู่ทั้งหมดเข้าคลังที่ต้องการ"
+                    >
+                      <Folder className="w-3.5 h-3.5 text-[#d67940]" />
+                      <span>+ แอดทั้งหมด ({displayedLocations.length}) เข้าคลัง</span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="text-[11px] text-slate-400">
+                  คลิกที่การ์ดเพื่อดูรายละเอียดและขยับหมุดบนแผนที่
+                </div>
+              </div>
+            </div>
+
+            {/* Gemini Scouting Advice if available */}
+            {geminiAnalysis && (
+              <div className="p-3.5 bg-white border border-[#285185]/30 rounded-2xl shadow-xs space-y-1.5">
+                <div className="flex items-center gap-1.5 text-xs font-black text-[#285185]">
+                  <Sparkles className="w-4 h-4 text-[#d67940]" />
+                  <span>Gemini AI Scout Suggestion</span>
+                </div>
+                {geminiAnalysis.mood && (
+                  <p className="text-xs text-slate-700 font-medium">
+                    🎬 <strong>Mood:</strong> {geminiAnalysis.mood}
+                  </p>
+                )}
+                {geminiAnalysis.directorTip && (
+                  <p className="text-xs text-slate-600 font-medium">
+                    💡 <strong>คำแนะนำกองถ่าย:</strong> {geminiAnalysis.directorTip}
+                  </p>
+                )}
               </div>
             )}
-            </>
-          )}
 
-        </div>
+            {/* 📊 RESULTS TABLE / 3-COLUMN CARD GRID (ทำเป็น 3 ช่องตามที่ขอ) */}
+            {loading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5 animate-pulse">
+                {[1, 2, 3, 4, 5, 6].map((n) => (
+                  <div key={n} className="h-60 bg-white rounded-2xl border border-slate-200 p-4 space-y-3" />
+                ))}
+              </div>
+            ) : displayedLocations.length === 0 ? (
+              <div className="text-center py-16 bg-white rounded-2xl border-2 border-dashed border-slate-300 p-8">
+                <Compass className="w-12 h-12 text-[#285185]/40 mx-auto mb-2" />
+                {selectedRegion === "ทั้งหมด" && !brief.trim() && activeTab === "search" && !filterOnlyPinned ? (
+                  <>
+                    <p className="text-slate-900 font-black text-base">เริ่มต้นค้นหาโลเคชันถ่ายทำ</p>
+                    <p className="text-xs text-slate-500 mt-1">
+                      พิมพ์คำค้นหาในช่องด้านบน หรือเลือกคลิกดูตามรายภาค / จังหวัดที่ต้องการเพื่อเริ่มสำรวจ
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-slate-900 font-black text-base">ไม่พบโลเคชันที่ตรงเงื่อนไข</p>
+                    <p className="text-xs text-slate-500 mt-1">
+                      ลองเปลี่ยนคำค้นหา หรือเลือกดูจังหวัดอื่นในภาคดูครับ
+                    </p>
+                  </>
+                )}
+              </div>
+            ) : (
+              <>
+                <div ref={cardsTopRef} className="scroll-mt-4" />
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5 items-start">
+                  {displayedLocations.map((loc, cardIdx) => {
+                    const isSaved = scoutingList.some((x) => x.id === loc.id);
+                    const isSelected = selectedLocation?.id === loc.id;
+                    const recceIndex = scoutingList.findIndex((x) => x.id === loc.id);
+                    const isHighlightExpanded = !!expandedIds[loc.id];
+                    const fullText = loc.hilight || loc.detail || "";
+                    // Thai font in 3-line clamp fits ~160-180 chars. Only show ดูเพิ่มเติม if text actually exceeds 160 chars
+                    const isTextLong = fullText.length > 160;
 
-        {/* === RIGHT COLUMN: Sticky Full-Height Interactive Map === */}
-        <div className="lg:col-span-5 xl:col-span-5 2xl:col-span-4 h-full">
-          <InteractiveMap
-            locations={displayedLocations}
-            selectedLocation={selectedLocation}
-            scoutingList={scoutingList}
-            onSelectLocation={handleSelectFromMap}
-            onDeselect={handleDeselect}
-            onToggleScout={toggleScout}
-            onClearScout={handleClearScout}
-            filterOnlyPinned={filterOnlyPinned}
-            onToggleFilterOnlyPinned={() => {
-              if (scoutingList.length > 0) {
-                setFilterOnlyPinned(!filterOnlyPinned);
-              }
-            }}
-            onOpenRag={(loc) => setRagTargetLocation(loc)}
-            onOpenSocial={(loc) => setSocialModalLocation(loc)}
-          />
-        </div>
+                    // Check which collections contain this location
+                    const parentCollections = collections.filter((c) =>
+                      c.locations.some((l) => l.id === loc.id)
+                    );
+                    const isInAnyCollection = parentCollections.length > 0;
 
-      </div>
+                    const isCardBeingDragged = cardDraggedIndex === cardIdx;
+                    const isCardTargetOver = cardDragOverIndex === cardIdx;
+                    const canReorder = !!activeCollectionId || filterOnlyPinned || activeTab === "scout";
 
-      {/* 🎙️ AI RAG Production Consultant Modal */}
+                    const handleCardMove = (fromIdx: number, toIdx: number) => {
+                      if (toIdx < 0 || toIdx >= displayedLocations.length) return;
+                      const updated = [...displayedLocations];
+                      const [moved] = updated.splice(fromIdx, 1);
+                      updated.splice(toIdx, 0, moved);
+
+                      if (activeCollectionId) {
+                        handleReorderCollectionLocations(activeCollectionId, updated);
+                      } else if (filterOnlyPinned || activeTab === "scout") {
+                        handleReorderScoutingList(updated);
+                      }
+                    };
+
+                    return (
+                      <div
+                        key={loc.id}
+                        draggable={canReorder}
+                        onDragStart={(e) => {
+                          if (!canReorder) return;
+                          setCardDraggedIndex(cardIdx);
+                          e.dataTransfer.effectAllowed = "move";
+                          e.dataTransfer.setData("text/plain", cardIdx.toString());
+                        }}
+                        onDragOver={(e) => {
+                          if (!canReorder) return;
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = "move";
+                          if (cardDragOverIndex !== cardIdx) {
+                            setCardDragOverIndex(cardIdx);
+                          }
+                        }}
+                        onDragLeave={() => {
+                          if (cardDragOverIndex === cardIdx) {
+                            setCardDragOverIndex(null);
+                          }
+                        }}
+                        onDrop={(e) => {
+                          if (!canReorder) return;
+                          e.preventDefault();
+                          if (cardDraggedIndex !== null && cardDraggedIndex !== cardIdx) {
+                            handleCardMove(cardDraggedIndex, cardIdx);
+                          }
+                          setCardDraggedIndex(null);
+                          setCardDragOverIndex(null);
+                        }}
+                        onDragEnd={() => {
+                          setCardDraggedIndex(null);
+                          setCardDragOverIndex(null);
+                        }}
+                        onClick={() => handleSelectFromCard(loc)}
+                        className={`self-start h-fit rounded-2xl p-4 transition-all duration-150 cursor-pointer flex flex-col justify-between border-2 ${
+                          isCardBeingDragged
+                            ? "opacity-40 border-dashed border-[#d67940] scale-[0.98]"
+                            : isCardTargetOver
+                            ? "border-[#d67940] bg-[#fff7ed] shadow-lg -translate-y-1"
+                            : isSelected
+                            ? "border-[#d67940] shadow-[4px_4px_0px_#a8521d] ring-2 ring-[#d67940]/20 scale-[1.01] bg-white"
+                            : isInAnyCollection && !activeCollectionId
+                            ? "border-[#d67940] bg-[#fffbf7] shadow-[2px_2px_0px_#d67940] hover:shadow-[4px_4px_0px_#d67940] hover:-translate-y-0.5"
+                            : "border-[#285185] bg-white shadow-[2px_2px_0px_#183354] hover:shadow-[4px_4px_0px_#183354] hover:-translate-y-0.5"
+                        }`}
+                      >
+                        {/* Top: Category, Order handle, and Pin Action / Collection Indicators */}
+                        <div>
+                          <div className="flex items-center justify-between mb-2 gap-2">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              {/* Reorder drag handle & up/down arrows when in collection or pinned workspace */}
+                              {canReorder && (
+                                <div className="flex items-center gap-0.5 shrink-0">
+                                  <div
+                                    className="cursor-grab active:cursor-grabbing p-1 text-slate-400 hover:text-[#285185] rounded"
+                                    title="ลากเพื่อสลับเรียงลำดับการ์ด"
+                                  >
+                                    <GripVertical className="w-4 h-4" />
+                                  </div>
+                                  <div className="flex flex-col -space-y-1">
+                                    <button
+                                      type="button"
+                                      disabled={cardIdx === 0}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleCardMove(cardIdx, cardIdx - 1);
+                                      }}
+                                      className="p-0.5 text-slate-400 hover:text-[#285185] disabled:opacity-20 disabled:hover:text-slate-400 cursor-pointer disabled:cursor-not-allowed"
+                                      title="เลื่อนขึ้น/ก่อนหน้า"
+                                    >
+                                      <ChevronUp className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={cardIdx === displayedLocations.length - 1}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleCardMove(cardIdx, cardIdx + 1);
+                                      }}
+                                      className="p-0.5 text-slate-400 hover:text-[#285185] disabled:opacity-20 disabled:hover:text-slate-400 cursor-pointer disabled:cursor-not-allowed"
+                                      title="เลื่อนลง/ถัดไป"
+                                    >
+                                      <ChevronDown className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+
+                              {activeCollectionId && (
+                                <span className="w-5 h-5 rounded-md bg-[#285185] text-white font-mono font-bold text-[11px] flex items-center justify-center shrink-0 shadow-2xs">
+                                  #{cardIdx + 1}
+                                </span>
+                              )}
+
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#ccd9e2] text-[#1b3558] border border-[#285185]/30 leading-snug inline-block w-fit max-w-full truncate">
+                                {loc.category || "แหล่งท่องเที่ยว"}
+                              </span>
+                            </div>
+
+                            {/* Top Right: Collection Tag & Pin Action */}
+                            <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+                              {/* Collection badge showing which collection(s) it belongs to */}
+                              {!activeCollectionId && isInAnyCollection && (
+                                <div className="flex items-center gap-1">
+                                  {parentCollections.map((col) => (
+                                    <span
+                                      key={col.id}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setActiveCollectionId(col.id);
+                                        setActiveTab("collection");
+                                        setFilterOnlyPinned(false);
+                                        handleDeselect();
+                                        setSelectedRegion("ทั้งหมด");
+                                        setSelectedProvince("all");
+                                      }}
+                                      className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-[#f07167]/15 text-[#b02a37] border border-[#f07167]/40 hover:bg-[#f07167]/25 transition flex items-center gap-1 cursor-pointer max-w-[120px] truncate shadow-2xs"
+                                      title={`อยู่ในกล่องคลัง: ${col.name} (คลิกเพื่อเข้าสู่คลังนี้)`}
+                                    >
+                                      <span>📁</span>
+                                      <span className="truncate">{col.name}</span>
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Only show Pin button when not viewing a specific collection */}
+                              {!activeCollectionId && (
+                                <div className="flex items-center gap-1 shrink-0">
+                                  {recceIndex !== -1 && (
+                                    <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                      #{recceIndex + 1}
+                                    </span>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleScout(loc);
+                                    }}
+                                    className={`p-1.5 rounded-xl border-2 text-xs transition cursor-pointer ${
+                                      isSaved
+                                        ? "bg-[#d67940] text-white border-[#d67940] shadow-xs"
+                                        : "bg-white text-slate-500 border-slate-300 hover:border-[#285185] hover:text-[#285185] shadow-xs"
+                                    }`}
+                                    title={isSaved ? "ถอนหมุด" : "ปักหมุด"}
+                                  >
+                                    <Pin className={`w-3.5 h-3.5 ${isSaved ? "fill-white rotate-[-45deg]" : "rotate-[-45deg]"}`} />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Location Name (เด่น ชัดเจน ตัวใหญ่ สะดุดตา) */}
+                          <h3 
+                            className="text-base sm:text-[17px] font-black text-[#1b3558] hover:text-[#d67940] transition-colors line-clamp-1 mb-1 tracking-tight" 
+                            title={loc.name_th}
+                          >
+                            {loc.name_th}
+                          </h3>
+
+                          {/* Province & District */}
+                          <p className="text-xs font-bold text-slate-500 mb-2 flex items-center gap-1.5">
+                            <MapPin className="w-3.5 h-3.5 text-[#d67940] shrink-0" />
+                            <span>{loc.province} {loc.district ? `· อ.${loc.district}` : ""}</span>
+                          </p>
+
+                          {/* Hilight Description (ดึงจากฟิลด์ไฮไลท์ของ ททท. ตกแต่งให้กระชับและสมบูรณ์ พร้อมปุ่มดูเพิ่มเติมเพื่อขยายเฉพาะกล่องนั้น) */}
+                          {fullText && (
+                            <div className="text-xs text-slate-700 bg-[#f8fafc] p-2.5 rounded-xl border border-slate-200 leading-relaxed mb-2.5 font-normal">
+                              <div className={isHighlightExpanded ? "" : "line-clamp-3"}>
+                                <span className="text-[#d67940] font-black mr-1 text-[11px]">✨ ไฮไลท์:</span>
+                                {fullText}
+                              </div>
+                              {isTextLong && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => toggleExpand(loc.id, e)}
+                                  className="text-[11px] font-black text-[#285185] hover:text-[#d67940] hover:underline mt-1.5 flex items-center gap-0.5 cursor-pointer"
+                                >
+                                  {isHighlightExpanded ? "▲ ย่อเนื้อหา" : "▼ ดูเพิ่มเติม..."}
+                                </button>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Coordinates */}
+                          <div className="text-[10px] font-mono text-slate-400 mb-1 flex items-center gap-1">
+                            <span className="font-bold text-slate-500">พิกัด GPS:</span>
+                            <span>{loc.lat ? `${loc.lat.toFixed(4)}, ${loc.lng?.toFixed(4)}` : "ระบุตามเขตพื้นที่"}</span>
+                          </div>
+                        </div>
+
+                        {/* Bottom Actions */}
+                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-1 mt-auto">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setRagTargetLocation(loc);
+                            }}
+                            className="text-[11px] font-black text-[#285185] hover:underline flex items-center gap-1"
+                          >
+                            <Sparkles className="w-3 h-3 text-[#d67940]" />
+                            <span>ข้อมูลกองถ่าย</span>
+                          </button>
+
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSocialModalLocation(loc);
+                              }}
+                              className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold"
+                              title="ดูรูปภาพจริงจาก Google Maps"
+                            >
+                              📷 รูปภาพ
+                            </button>
+
+                            {activeCollectionId ? (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemoveLocationFromCollection(activeCollectionId, loc.id);
+                                }}
+                                className="px-2 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[10px] font-bold cursor-pointer transition"
+                                title="ลบออกจากกล่องคลังนี้"
+                              >
+                                ✕ ลบออกจากกล่อง
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setAddToCollectionTarget(loc);
+                                }}
+                                className="px-2 py-1 rounded-lg bg-[#ccd9e2]/60 hover:bg-[#ccd9e2] text-[#1b3558] text-[10px] font-bold cursor-pointer transition"
+                                title="จัดเก็บลงคลัง"
+                              >
+                                + เข้าคลัง
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Load more button */}
+                {displayedLocations.length < totalDbMatches && activeTab === "search" && !filterOnlyPinned && !activeCollectionId && (
+                  <div className="text-center py-6">
+                    <button
+                      onClick={handleLoadMore}
+                      disabled={loading}
+                      className="px-6 py-2.5 rounded-xl bg-white border-2 border-[#285185] hover:bg-[#ccd9e2]/30 text-[#285185] font-black text-xs shadow-[2px_2px_0px_#183354] transition"
+                    >
+                      {loading ? "กำลังโหลด..." : `+ โหลดสถานที่เพิ่มอีก (+300) (จากทั้งหมด ${totalDbMatches.toLocaleString()} พิกัด)`}
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+
+          </div>
+
+          {/* === 1 PART RIGHT: Fixed Map (1 ส่วนแผนที่ ฟิกตำแหน่งไว้ด้านขวา แบบกลมกลืนธีม) === */}
+          <div className={`lg:col-span-1 h-[460px] lg:h-full bg-[#f8fafc] p-3 sm:p-4 flex flex-col relative shrink-0 transition-all duration-200 ${
+            ragTargetLocation || socialModalLocation ? "blur-xs opacity-60 pointer-events-none" : ""
+          }`}>
+            <div className="h-full w-full rounded-2xl overflow-hidden border-2 border-[#285185] shadow-[4px_4px_0px_#183354] flex flex-col bg-white">
+              <InteractiveMap
+                locations={displayedLocations}
+                selectedLocation={selectedLocation}
+                scoutingList={scoutingList}
+                onSelectLocation={handleSelectFromMap}
+                onDeselect={handleDeselect}
+                onToggleScout={toggleScout}
+                onClearScout={handleClearScout}
+                filterOnlyPinned={filterOnlyPinned}
+                isCollectionMode={!!activeCollectionId}
+                onToggleFilterOnlyPinned={() => {
+                  if (scoutingList.length > 0) {
+                    setFilterOnlyPinned(!filterOnlyPinned);
+                  }
+                }}
+                onOpenRag={(loc) => setRagTargetLocation(loc)}
+                onOpenSocial={(loc) => setSocialModalLocation(loc)}
+              />
+            </div>
+          </div>
+
+        </main>
+
+      {/* 🎙️ AI RAG Dossier Modal */}
       {ragTargetLocation && (
         <RagModal
           location={ragTargetLocation}
@@ -951,7 +1396,7 @@ export default function Home() {
         />
       )}
 
-      {/* 📸 Google Maps Place Photos & Reviews Modal */}
+      {/* 📸 Google Maps Place Photos Modal */}
       {socialModalLocation && (
         <SocialReviewsModal
           location={socialModalLocation}
@@ -959,7 +1404,7 @@ export default function Home() {
         />
       )}
 
-      {/* 📁 คลังเซฟ Collections Modal */}
+      {/* 📁 Collections Modal */}
       <CollectionsModal
         isOpen={isCollectionsModalOpen}
         onClose={() => setIsCollectionsModalOpen(false)}
@@ -971,14 +1416,16 @@ export default function Home() {
           setFilterOnlyPinned(false);
         }}
         onCreateCollection={handleCreateCollection}
+        onRenameCollection={handleRenameCollection}
         onDeleteCollection={handleDeleteCollection}
         onRemoveLocationFromCollection={handleRemoveLocationFromCollection}
+        onReorderLocations={handleReorderCollectionLocations}
         onSelectLocationOnMap={(loc) => {
           handleSelectFromMap(loc);
         }}
       />
 
-      {/* 📥 บันทึกเข้ากล่อง AddToCollectionModal */}
+      {/* 📥 Add To Collection Modal */}
       {addToCollectionTarget && (
         <AddToCollectionModal
           isOpen={!!addToCollectionTarget}
@@ -986,9 +1433,11 @@ export default function Home() {
           location={addToCollectionTarget}
           collections={collections}
           onToggleLocationInCollection={handleToggleLocationInCollection}
+          onAddMultipleToCollection={handleAddMultipleToCollection}
           onCreateCollection={handleCreateCollection}
         />
       )}
+
     </div>
   );
 }

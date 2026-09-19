@@ -1,229 +1,234 @@
 "use client";
 
-import React, { useState } from "react";
-import { Zap, ChevronRight } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { UserPlus, LogIn, ShieldCheck, ChevronRight, Sparkles } from "lucide-react";
+import { MockUser, getMockUsers, registerMockUser, authenticateMockUser } from "@/utils/mockAuth";
 
 interface LoginViewProps {
-  onLogin: (user: { role: "creator" | "owner"; name: string; email: string }) => void;
+  onLogin: (user: MockUser) => void;
 }
 
 export default function LoginView({ onLogin }: LoginViewProps) {
+  const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [usersTable, setUsersTable] = useState<MockUser[]>([]);
 
-  const handleCustomSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    setUsersTable(getMockUsers());
+  }, []);
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
-    const isOwner = email.toLowerCase().includes("owner") || email.toLowerCase().includes("host");
-    onLogin({
-      role: isOwner ? "owner" : "creator",
-      name: isOwner ? "คุณเอก (เจ้าของพื้นที่)" : "มินท์ N",
-      email: email,
-    });
+    setError(null);
+
+    if (!email.trim()) {
+      setError("กรุณากรอกอีเมล");
+      return;
+    }
+
+    if (mode === "register") {
+      if (!name.trim()) {
+        setError("กรุณากรอกชื่อ-นามสกุล หรือชื่อทีมงาน");
+        return;
+      }
+      const res = registerMockUser({
+        name: name.trim(),
+        email: email.trim(),
+        password: password || "password123",
+      });
+
+      if (!res.success || !res.user) {
+        setError(res.error || "ไม่สามารถลงทะเบียนได้");
+        return;
+      }
+
+      setUsersTable(getMockUsers());
+      onLogin(res.user);
+    } else {
+      const res = authenticateMockUser(email.trim(), password);
+      if (!res.success || !res.user) {
+        setError(res.error || "เข้าสู่ระบบไม่สำเร็จ");
+        return;
+      }
+      onLogin(res.user);
+    }
+  };
+
+  const handleQuickLogin = (user: MockUser) => {
+    onLogin(user);
   };
 
   return (
-    <div className="min-h-screen bg-[#1e3a5f] flex flex-col lg:flex-row items-center justify-between p-6 sm:p-12 lg:p-20 relative overflow-hidden">
+    <div className="min-h-screen bg-[#285185] flex items-center justify-center p-4 sm:p-6 relative overflow-hidden font-sans">
       {/* Background Decor */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[#e06d44]/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#ccd9e2]/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#d67940]/20 rounded-full blur-3xl pointer-events-none" />
 
-      {/* LEFT SECTION: Brand Hero & Value Proposition */}
-      <div className="w-full lg:max-w-xl text-white space-y-8 z-10 py-6">
-        {/* Brand Logo & Title */}
-        <div className="flex items-center gap-3.5">
-          <div className="w-11 h-11 rounded-xl bg-[#e06d44] flex items-center justify-center text-white shadow-md font-black text-xl">
+      {/* CENTERED CARD CONTAINER */}
+      <div className="w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-[8px_8px_0px_#183354] border-[3px] border-[#285185] z-10 relative my-auto">
+        
+        {/* Brand Header */}
+        <div className="text-center mb-6">
+          <div className="w-12 h-12 rounded-2xl bg-[#d67940] border-2 border-white/20 flex items-center justify-center text-white shadow-[3px_3px_0px_#a8521d] font-black text-2xl mx-auto mb-3">
             ⚡
           </div>
-          <div>
-            <h1 className="font-extrabold text-lg leading-tight tracking-tight text-white">
-              Travel Location
-            </h1>
-            <p className="font-semibold text-xs tracking-wide text-slate-300">
-              Marketplace
-            </p>
-          </div>
-        </div>
-
-        {/* Hero Title & Subtitle */}
-        <div className="space-y-4">
-          <div className="inline-block text-xs font-bold uppercase tracking-wider text-slate-300/80">
-            LOCATION WORKSPACE
-          </div>
-          <h2 className="text-3xl sm:text-5xl font-black leading-tight tracking-tight text-white">
-            ทุกมุมที่ใช่ <br />
-            <span className="text-[#e06d44]">เริ่มจากข้อมูลที่ตรวจสอบได้</span>
-          </h2>
-          <p className="text-slate-300 text-sm sm:text-base leading-relaxed pt-2 max-w-md font-normal">
-            พื้นที่ทำงานที่แยกชัดเจนสำหรับคนหาโลเคชันและเจ้าของสถานที่ พร้อมสถานะและแหล่งที่มาของข้อมูล
+          <h1 className="text-xl sm:text-2xl font-black text-[#1b3558] tracking-tight">
+            Travel Location
+          </h1>
+          <p className="text-xs font-bold text-slate-500 mt-0.5">
+            Creator Space · ค้นหาโลเคชันถ่ายทำ ททท.
           </p>
         </div>
 
-        {/* Bullet Points */}
-        <div className="space-y-3 pt-2 text-xs sm:text-sm text-slate-200">
-          <div className="flex items-center gap-2.5">
-            <span className="w-4 h-4 rounded-full bg-blue-500/30 flex items-center justify-center text-[10px] text-blue-200 font-bold">
-              🔍
-            </span>
-            <span>ค้นหาและปักหมุดหลายสถานที่</span>
-          </div>
-          <div className="flex items-center gap-2.5">
-            <span className="w-4 h-4 rounded-full bg-blue-500/30 flex items-center justify-center text-[10px] text-blue-200 font-bold">
-              ○
-            </span>
-            <span>ส่งคำขอเป็นรายสถานที่</span>
-          </div>
-          <div className="flex items-center gap-2.5">
-            <span className="w-4 h-4 rounded-full bg-blue-500/30 flex items-center justify-center text-[10px] text-blue-200 font-bold">
-              ▣
-            </span>
-            <span>เจ้าของเห็นความสนใจและคำขอ</span>
-          </div>
+        {/* Toggle Mode: Login vs Register */}
+        <div className="flex bg-[#f0f5f8] p-1 rounded-2xl mb-5 border border-[#ccd9e2]">
+          <button
+            type="button"
+            onClick={() => { setMode("login"); setError(null); }}
+            className={`flex-1 py-2 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer ${
+              mode === "login"
+                ? "bg-[#285185] text-white shadow-sm"
+                : "text-slate-600 hover:text-[#285185]"
+            }`}
+          >
+            <LogIn className="w-4 h-4" />
+            <span>เข้าสู่ระบบ</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => { setMode("register"); setError(null); }}
+            className={`flex-1 py-2 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer ${
+              mode === "register"
+                ? "bg-[#d67940] text-white shadow-sm"
+                : "text-slate-600 hover:text-[#d67940]"
+            }`}
+          >
+            <UserPlus className="w-4 h-4" />
+            <span>ลงทะเบียนใหม่</span>
+          </button>
         </div>
 
-        {/* Bottom Small Indicator */}
-        <div className="pt-8">
-          <div className="w-8 h-8 rounded-full bg-[#152943] text-slate-300 border border-slate-600/50 flex items-center justify-center font-bold text-xs shadow-inner">
-            N
+        {error && (
+          <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold">
+            ⚠️ {error}
           </div>
-        </div>
-      </div>
+        )}
 
-      {/* RIGHT SECTION: White Sign-In Card Matching Prototype */}
-      <div className="w-full lg:w-[460px] bg-white rounded-3xl p-8 sm:p-10 shadow-2xl z-10 relative mt-8 lg:mt-0">
-        {/* Eyebrow & Title */}
-        <div className="mb-6">
-          <span className="text-[11px] font-black uppercase tracking-wider text-[#b95d46]">
-            SIGN IN · PROTOTYPE
-          </span>
-          <h3 className="text-2xl sm:text-3xl font-black text-slate-900 mt-1">
-            เข้าสู่พื้นที่ทำงาน
-          </h3>
-          <p className="text-xs text-slate-500 mt-1.5">
-            เลือกบัญชีทดสอบด้านล่าง หรือกรอกอีเมลและรหัสผ่าน
-          </p>
-        </div>
+        {/* Form Inputs */}
+        <form onSubmit={handleSubmit} className="space-y-3.5">
+          {mode === "register" && (
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                ชื่อ-นามสกุล หรือชื่อกองถ่าย
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="เช่น มินท์ N, สยามโปรดักชั่น"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#285185] focus:ring-2 focus:ring-[#285185]/15"
+                required
+              />
+            </div>
+          )}
 
-        {/* Form Inputs (Prototype Mock) */}
-        <form onSubmit={handleCustomSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">
+            <label className="block text-xs font-bold text-slate-700 mb-1">
               อีเมล
             </label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@example.com"
-              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#1e3a5f] focus:ring-2 focus:ring-blue-500/10 transition"
+              placeholder="creator@example.com"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#285185] focus:ring-2 focus:ring-[#285185]/15"
+              required
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">
+            <label className="block text-xs font-bold text-slate-700 mb-1">
               รหัสผ่าน
             </label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#1e3a5f] focus:ring-2 focus:ring-blue-500/10 transition"
+              placeholder="•••••••• (ตัวอย่าง: password123)"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#285185] focus:ring-2 focus:ring-[#285185]/15"
             />
           </div>
 
           <button
             type="submit"
-            className="w-full py-3 px-4 rounded-xl bg-[#1e3a5f] hover:bg-[#152943] text-white font-bold text-sm shadow-md transition cursor-pointer"
+            className={`w-full py-2.5 px-4 rounded-xl text-white font-black text-sm shadow-[3px_3px_0px_#183354] transition cursor-pointer flex items-center justify-center gap-2 mt-2 ${
+              mode === "register"
+                ? "bg-[#d67940] hover:bg-[#c06530]"
+                : "bg-[#285185] hover:bg-[#1f406a]"
+            }`}
           >
-            เข้าสู่ระบบ
+            {mode === "register" ? (
+              <>
+                <UserPlus className="w-4 h-4" />
+                <span>ลงทะเบียนและเริ่มใช้งาน</span>
+              </>
+            ) : (
+              <>
+                <LogIn className="w-4 h-4" />
+                <span>เข้าสู่ระบบ</span>
+              </>
+            )}
           </button>
         </form>
 
-        {/* Test Accounts Section */}
-        <div className="mt-8 pt-6 border-t border-slate-100">
-          <p className="text-xs font-bold text-slate-700 mb-3">
-            บัญชีสำหรับทดสอบ
-          </p>
-
-          <div className="space-y-3">
-            {/* 1. Creator Account Button */}
-            <div
-              onClick={() =>
-                onLogin({
-                  role: "creator",
-                  name: "มินท์ N",
-                  email: "creator@travel-location.test",
-                })
-              }
-              className="p-3.5 rounded-2xl border border-slate-200 hover:border-slate-300 bg-slate-50/50 hover:bg-slate-50 transition cursor-pointer flex items-center justify-between group"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-slate-200/80 flex items-center justify-center text-slate-700 font-bold shrink-0">
-                  <span className="text-sm">⚑</span>
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-sm text-slate-900">
-                      Creator
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-500 line-clamp-1">
-                    ค้นหา ปักหมุด วางแผน และส่งคำขอ
-                  </p>
-                  <p className="text-[10px] font-mono text-slate-400">
-                    creator@travel-location.test · Creator123!
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1 text-xs font-bold text-slate-700 group-hover:text-blue-600 transition shrink-0 ml-2">
-                <span>ใช้บัญชีนี้</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </div>
-            </div>
-
-            {/* 2. Owner Account Button */}
-            <div
-              onClick={() =>
-                onLogin({
-                  role: "owner",
-                  name: "คุณเอก (เจ้าของพื้นที่)",
-                  email: "owner@travel-location.test",
-                })
-              }
-              className="p-3.5 rounded-2xl border border-slate-200 hover:border-slate-300 bg-slate-50/50 hover:bg-slate-50 transition cursor-pointer flex items-center justify-between group"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-rose-100/70 border border-rose-200/60 flex items-center justify-center text-rose-700 font-bold shrink-0">
-                  <span className="text-xs">▣</span>
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-sm text-slate-900">
-                      Owner
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-500 line-clamp-1">
-                    จัดการสถานที่ ตอบคำขอ และดูสถิติ
-                  </p>
-                  <p className="text-[10px] font-mono text-slate-400">
-                    owner@travel-location.test · Owner123!
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1 text-xs font-bold text-slate-700 group-hover:text-blue-600 transition shrink-0 ml-2">
-                <span>ใช้บัญชีนี้</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </div>
-            </div>
+        {/* Quick Login Accounts (Simulated Database Table) */}
+        <div className="mt-5 pt-4 border-t border-slate-200">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[11px] font-black text-slate-700">
+              บัญชีในตาราง Database จำลอง ({usersTable.length} บัญชี)
+            </p>
+            <span className="text-[10px] font-mono text-slate-400">คลิกเพื่อเข้าด่วน</span>
           </div>
 
-          <p className="text-[11px] text-slate-400 mt-4 leading-relaxed">
-            * ใช้เพื่อทดสอบ prototype เท่านั้น ไม่มีการเชื่อมต่อระบบยืนยันตัวตนจริง
-          </p>
+          <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+            {usersTable.map((u) => (
+              <div
+                key={u.id}
+                onClick={() => handleQuickLogin(u)}
+                className="p-2 rounded-xl border border-slate-200 hover:border-[#285185] bg-slate-50/80 hover:bg-[#f0f5f8] transition cursor-pointer flex items-center justify-between group"
+              >
+                <div className="flex items-center gap-2.5 truncate">
+                  <div className="w-7 h-7 rounded-lg bg-[#285185] text-white flex items-center justify-center text-xs font-black shrink-0">
+                    {u.avatar || u.name.charAt(0)}
+                  </div>
+                  <div className="truncate">
+                    <div className="font-bold text-xs text-slate-900 truncate leading-tight">
+                      {u.name}
+                    </div>
+                    <p className="text-[10px] font-mono text-slate-400 truncate">
+                      {u.email}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1 text-[11px] font-bold text-[#285185] group-hover:translate-x-0.5 transition shrink-0 ml-1">
+                  <span>เลือก</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
+
+        {/* Bottom Small Note */}
+        <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2 text-[10px] text-slate-500">
+          <ShieldCheck className="w-3.5 h-3.5 text-[#d67940] shrink-0" />
+          <span>ระบบจำลองฐานข้อมูลในเครื่อง (LocalStorage Prototype)</span>
+        </div>
+
       </div>
     </div>
   );

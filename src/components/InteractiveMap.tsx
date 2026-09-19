@@ -26,6 +26,7 @@ interface InteractiveMapProps {
   onToggleScout: (loc: MapLocation) => void;
   onClearScout?: () => void;
   filterOnlyPinned?: boolean;
+  isCollectionMode?: boolean;
   onToggleFilterOnlyPinned?: () => void;
   onOpenRag?: (loc: MapLocation) => void;
   onOpenSocial?: (loc: MapLocation) => void;
@@ -52,6 +53,39 @@ function calculateTotalDistance(locs: MapLocation[]): number {
   return Math.round(total * 10) / 10;
 }
 
+function calculateStraightLegDistances(locs: MapLocation[]): number[] {
+  const valid = locs.filter((l) => l.lat && l.lng);
+  if (valid.length < 2) return [];
+  const distances: number[] = [];
+  const R = 6371;
+  for (let i = 0; i < valid.length - 1; i++) {
+    const lat1 = (valid[i].lat! * Math.PI) / 180;
+    const lon1 = (valid[i].lng! * Math.PI) / 180;
+    const lat2 = (valid[i + 1].lat! * Math.PI) / 180;
+    const lon2 = (valid[i + 1].lng! * Math.PI) / 180;
+    const dlat = lat2 - lat1;
+    const dlon = lon2 - lon1;
+    const a =
+      Math.sin(dlat / 2) * Math.sin(dlat / 2) +
+      Math.cos(lat1) * Math.cos(lat2) * Math.sin(dlon / 2) * Math.sin(dlon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    distances.push(Math.round(R * c * 10) / 10);
+  }
+  return distances;
+}
+
+// Distinct curated high-contrast colors for sequential travel legs (Leg #1->#2, #2->#3, #3->#4, etc.)
+const LEG_COLORS = [
+  { stroke: "#f97316", outline: "#183354", name: "ส้มอำพัน (Leg 1)" },       // #1 -> #2: Bright Orange / Navy
+  { stroke: "#06b6d4", outline: "#082f49", name: "ฟ้าเทอร์ควอยซ์ (Leg 2)" },   // #2 -> #3: Cyan / Deep Blue
+  { stroke: "#10b981", outline: "#064e3b", name: "เขียวมรกต (Leg 3)" },      // #3 -> #4: Emerald / Dark Green
+  { stroke: "#ec4899", outline: "#831843", name: "ชมพูสด (Leg 4)" },         // #4 -> #5: Pink / Dark Rose
+  { stroke: "#8b5cf6", outline: "#2e1065", name: "ม่วงไวโอเล็ต (Leg 5)" },    // #5 -> #6: Violet / Deep Purple
+  { stroke: "#eab308", outline: "#422006", name: "ทองอำพัน (Leg 6)" },       // #6 -> #7: Yellow-Amber / Brown
+  { stroke: "#14b8a6", outline: "#134e4a", name: "เขียวอมฟ้า (Leg 7)" },     // #7 -> #8: Teal
+  { stroke: "#f43f5e", outline: "#4c0519", name: "แดงทับทิม (Leg 8)" },      // #8 -> #9: Rose-Red
+];
+
 function isThailandCoords(lat?: number, lng?: number): boolean {
   if (typeof lat !== "number" || typeof lng !== "number") return false;
   return lat >= 5.5 && lat <= 20.6 && lng >= 97.0 && lng <= 106.0;
@@ -66,6 +100,7 @@ export default function InteractiveMap({
   onToggleScout,
   onClearScout,
   filterOnlyPinned = false,
+  isCollectionMode = false,
   onToggleFilterOnlyPinned,
   onOpenRag,
   onOpenSocial,
@@ -73,9 +108,15 @@ export default function InteractiveMap({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
-  const routePolylineRef = useRef<L.Polyline | null>(null);
+  const routeLayerGroupRef = useRef<L.LayerGroup | null>(null);
+  const prevRouteCoordsRef = useRef<string>("");
   const prevSelectedIdRef = useRef<string | null>(null);
   const prevLocationsRef = useRef<MapLocation[] | null>(null);
+
+  // State for real road driving distance and routing status
+  const [roadDistanceKm, setRoadDistanceKm] = React.useState<number | null>(null);
+  const [legDistancesKm, setLegDistancesKm] = React.useState<number[]>([]);
+  const [isRoutingLoading, setIsRoutingLoading] = React.useState(false);
 
   const onDeselectRef = useRef(onDeselect);
   useEffect(() => {
@@ -103,6 +144,7 @@ export default function InteractiveMap({
       maxZoom: 19,
     }).addTo(map);
 
+    routeLayerGroupRef.current = L.layerGroup().addTo(map);
     markersLayerRef.current = L.layerGroup().addTo(map);
     mapInstanceRef.current = map;
 
@@ -154,43 +196,194 @@ export default function InteractiveMap({
 
     layer.clearLayers();
 
-    if (routePolylineRef.current) {
-      routePolylineRef.current.remove();
-      routePolylineRef.current = null;
-    }
-
     const locsToRender = filterOnlyPinned ? scoutingList : locations;
     const validLocs = locsToRender.filter((l) => isThailandCoords(l.lat, l.lng));
     const bounds: [number, number][] = [];
 
-    // Polyline for Recce Points
-    const validRecce = scoutingList.filter((l) => isThailandCoords(l.lat, l.lng));
-    if (validRecce.length >= 2) {
-      const latLngs = validRecce.map((l) => [l.lat!, l.lng!] as [number, number]);
-      routePolylineRef.current = L.polyline(latLngs, {
-        color: "#0284c7",
-        weight: 4,
-        dashArray: "6, 8",
-        opacity: 0.9,
-      }).addTo(map);
+    // Polyline for Recce Points - Real Road Following Route (OSRM Driving)
+    // Show when viewing pinned locations OR when viewing a collection with >= 2 points
+    const pointsToRoute = isCollectionMode 
+      ? locations.filter((l) => isThailandCoords(l.lat, l.lng))
+      : scoutingList.filter((l) => isThailandCoords(l.lat, l.lng));
+
+    const shouldDrawRoute = (filterOnlyPinned || isCollectionMode) && pointsToRoute.length >= 2;
+    const routeGroup = routeLayerGroupRef.current;
+
+    if (shouldDrawRoute && routeGroup) {
+      const coordsString = pointsToRoute.map((l) => `${l.lng},${l.lat}`).join(";");
+      const isRoutePointsChanged = prevRouteCoordsRef.current !== coordsString;
+
+      if (isRoutePointsChanged) {
+        prevRouteCoordsRef.current = coordsString;
+        routeGroup.clearLayers();
+
+        // Temporary fallback: straight lines per leg with distinct colors while OSRM loads
+        for (let i = 0; i < pointsToRoute.length - 1; i++) {
+          const legColor = LEG_COLORS[i % LEG_COLORS.length];
+          const segLatLngs: [number, number][] = [
+            [pointsToRoute[i].lat!, pointsToRoute[i].lng!],
+            [pointsToRoute[i + 1].lat!, pointsToRoute[i + 1].lng!],
+          ];
+
+          // 1. Dark outline for contrast
+          const outlineLine = L.polyline(segLatLngs, {
+            color: legColor.outline,
+            weight: 7,
+            opacity: 0.9,
+            lineCap: "round",
+            lineJoin: "round",
+          });
+
+          // 2. High-contrast leg-specific colored dashed line on top (later legs layered above)
+          const dashedLine = L.polyline(segLatLngs, {
+            color: legColor.stroke,
+            weight: 5,
+            dashArray: "8, 8",
+            opacity: 1,
+            lineCap: "round",
+            lineJoin: "round",
+          });
+
+          routeGroup.addLayer(outlineLine);
+          routeGroup.addLayer(dashedLine);
+        }
+
+        setIsRoutingLoading(true);
+        const controller = new AbortController();
+
+        // Request steps=true to get exact geometry per leg between points
+        fetch(`https://router.project-osrm.org/route/v1/driving/${coordsString}?overview=full&geometries=geojson&steps=true`, {
+          signal: controller.signal,
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data?.code === "Ok" && data.routes?.[0]) {
+              const route = data.routes[0];
+              const roadDistance = Math.round((route.distance / 1000) * 10) / 10;
+              setRoadDistanceKm(roadDistance);
+
+              // Remove fallback straight lines
+              routeGroup.clearLayers();
+
+              // If OSRM returned legs, draw each leg with its unique color
+              const legs = route.legs;
+              if (Array.isArray(legs) && legs.length > 0) {
+                const legDists: number[] = [];
+                legs.forEach((leg: any, legIndex: number) => {
+                  const distKm = Math.round((leg.distance / 1000) * 10) / 10;
+                  legDists.push(distKm);
+
+                  const legColor = LEG_COLORS[legIndex % LEG_COLORS.length];
+                  const legCoords: [number, number][] = [];
+
+                  // Collect points from each step in this leg
+                  if (leg.steps && Array.isArray(leg.steps)) {
+                    leg.steps.forEach((step: any) => {
+                      if (step.geometry?.coordinates) {
+                        step.geometry.coordinates.forEach((c: [number, number]) => {
+                          legCoords.push([c[1], c[0]]);
+                        });
+                      }
+                    });
+                  }
+
+                  if (legCoords.length >= 2) {
+                    const outline = L.polyline(legCoords, {
+                      color: legColor.outline,
+                      weight: 7,
+                      opacity: 0.95,
+                      lineCap: "round",
+                      lineJoin: "round",
+                    });
+
+                    const dashed = L.polyline(legCoords, {
+                      color: legColor.stroke,
+                      weight: 5,
+                      dashArray: "8, 8",
+                      opacity: 1,
+                      lineCap: "round",
+                      lineJoin: "round",
+                    });
+
+                    // Add hover tooltip on leg to show "จุด #1 → #2"
+                    dashed.bindTooltip(
+                      `<div style="font-family:'Nunito','Mitr',sans-serif; font-weight:900; font-size:11px; color:${legColor.stroke};">📍 เส้นทางช่วงจุดที่ #${legIndex + 1} ➔ #${legIndex + 2} (${distKm} กม.)</div>`,
+                      { sticky: true, opacity: 0.95 }
+                    );
+
+                    routeGroup.addLayer(outline);
+                    routeGroup.addLayer(dashed);
+                  }
+                });
+                setLegDistancesKm(legDists);
+              } else if (route.geometry?.coordinates) {
+                // Single full geometry fallback
+                const roadPoints = route.geometry.coordinates.map((c: [number, number]) => [c[1], c[0]] as [number, number]);
+                const fallbackOutline = L.polyline(roadPoints, {
+                  color: "#183354",
+                  weight: 7,
+                  opacity: 0.95,
+                  lineCap: "round",
+                  lineJoin: "round",
+                });
+
+                const fallbackDashed = L.polyline(roadPoints, {
+                  color: "#f97316",
+                  weight: 5,
+                  dashArray: "8, 8",
+                  opacity: 1,
+                  lineCap: "round",
+                  lineJoin: "round",
+                });
+
+                routeGroup.addLayer(fallbackOutline);
+                routeGroup.addLayer(fallbackDashed);
+                setLegDistancesKm(calculateStraightLegDistances(pointsToRoute));
+              }
+            } else {
+              setRoadDistanceKm(calculateTotalDistance(pointsToRoute));
+              setLegDistancesKm(calculateStraightLegDistances(pointsToRoute));
+            }
+          })
+          .catch((err) => {
+            if (err.name !== "AbortError") {
+              setRoadDistanceKm(calculateTotalDistance(pointsToRoute));
+              setLegDistancesKm(calculateStraightLegDistances(pointsToRoute));
+            }
+          })
+          .finally(() => {
+            setIsRoutingLoading(false);
+          });
+      }
+    } else {
+      prevRouteCoordsRef.current = "";
+      routeGroup?.clearLayers();
+      setRoadDistanceKm(null);
+      setLegDistancesKm([]);
+      setIsRoutingLoading(false);
     }
 
-    validLocs.forEach((loc) => {
+    validLocs.forEach((loc, locIndex) => {
       const lat = loc.lat!;
       const lng = loc.lng!;
       bounds.push([lat, lng]);
 
       const isSelected = selectedLocation?.id === loc.id;
-      const recceIndex = scoutingList.findIndex((x) => x.id === loc.id);
-      const isRecce = recceIndex !== -1;
+      const recceIndex = isCollectionMode 
+        ? locIndex 
+        : scoutingList.findIndex((x) => x.id === loc.id);
+      const isRecce = isCollectionMode ? true : recceIndex !== -1;
 
-      // Pin colors & size
+      // Pin colors & size:
+      // Pinned / Collection locations = Distinct Leather Amber (#d67940) with rank number (#1, #2, ...)
+      // Selected location = Golden / prominent teardrop
+      // Unpinned locations = Original teardrop pin (#285185) with 📍 emoji
       const size = isSelected ? 38 : isRecce ? 34 : 30;
-      const bg = isSelected ? "#e11d48" : isRecce ? "#16a34a" : "#7c3aed";
-      const border = isSelected ? "#881337" : isRecce ? "#14532d" : "#4c1d95";
+      const bg = isSelected ? "#d67940" : isRecce ? "#d67940" : "#285185";
+      const border = isSelected ? "#ffffff" : isRecce ? "#ffffff" : "#ffffff";
       const badgeText = isRecce ? `#${recceIndex + 1}` : isSelected ? "★" : "📍";
 
-      // Teardrop pin design with exact anchoring
+      // Classic teardrop pin design with exact anchoring
       const pinHtml = `
         <div style="
           width: ${size}px;
@@ -199,7 +392,7 @@ export default function InteractiveMap({
           border: 2.5px solid ${border};
           border-radius: 50% 50% 50% 0;
           transform: rotate(-45deg);
-          box-shadow: ${isSelected ? "3px 3px 0px #000000" : "2px 2px 0px rgba(0,0,0,0.35)"};
+          box-shadow: ${isSelected ? "3px 3px 0px rgba(24, 51, 84, 0.7)" : "2px 2px 0px rgba(24, 51, 84, 0.45)"};
           display: flex;
           align-items: center;
           justify-content: center;
@@ -211,7 +404,7 @@ export default function InteractiveMap({
             color: #ffffff;
             font-family: 'Nunito', 'Mitr', sans-serif;
             font-weight: 900;
-            font-size: ${isRecce ? "12px" : "11px"};
+            font-size: ${isRecce ? "12px" : isSelected ? "13px" : "12px"};
             text-align: center;
             line-height: 1;
           ">${badgeText}</span>
@@ -273,10 +466,10 @@ export default function InteractiveMap({
                 font-size: 11px;
                 font-weight: 900;
                 cursor: pointer;
-                border: 2px solid ${isPinned ? '#e11d48' : '#16a34a'};
-                background-color: ${isPinned ? '#ffe4e6' : '#bbf7d0'};
-                color: ${isPinned ? '#9f1239' : '#14532d'};
-                box-shadow: 2px 2px 0px ${isPinned ? '#be123c' : '#15803d'};
+                border: 2px solid ${isPinned ? '#6f4849' : '#285185'};
+                background-color: ${isPinned ? '#fbf6f6' : '#285185'};
+                color: ${isPinned ? '#6f4849' : '#ffffff'};
+                box-shadow: 2px 2px 0px ${isPinned ? '#4d2f30' : '#183354'};
                 display: flex;
                 align-items: center;
                 justify-content: center;
@@ -299,10 +492,10 @@ export default function InteractiveMap({
                   font-size: 11px;
                   font-weight: 900;
                   cursor: pointer;
-                  border: 2px solid #7c3aed;
-                  background-color: #f5f3ff;
-                  color: #6d28d9;
-                  box-shadow: 2px 2px 0px #7c3aed;
+                  border: 2px solid #285185;
+                  background-color: #f0f5f8;
+                  color: #1b3558;
+                  box-shadow: 2px 2px 0px #183354;
                   display: flex;
                   align-items: center;
                   justify-content: center;
@@ -312,7 +505,7 @@ export default function InteractiveMap({
                   transition: all 0.1s ease;
                 "
               >
-                ✨ AI RAG
+                ✨ ข้อมูลกองถ่าย
               </button>
             `
                 : ""
@@ -330,10 +523,10 @@ export default function InteractiveMap({
                   font-size: 11px;
                   font-weight: 900;
                   cursor: pointer;
-                  border: 2px solid #ea580c;
+                  border: 2px solid #d67940;
                   background-color: #fff7ed;
-                  color: #9a3412;
-                  box-shadow: 2px 2px 0px #c2410c;
+                  color: #7c2d12;
+                  box-shadow: 2px 2px 0px #a8521d;
                   display: flex;
                   align-items: center;
                   justify-content: center;
@@ -412,7 +605,7 @@ export default function InteractiveMap({
     } else if (!selectedLocation) {
       map.closePopup();
     }
-  }, [locations, selectedLocation, scoutingList, filterOnlyPinned, onOpenRag]);
+  }, [locations, selectedLocation, scoutingList, filterOnlyPinned, isCollectionMode, onOpenRag]);
 
   const handleFitAll = () => {
     const map = mapInstanceRef.current;
@@ -424,7 +617,9 @@ export default function InteractiveMap({
     map.fitBounds(bounds, { padding: [50, 50], maxZoom: 13 });
   };
 
-  const validRecce = scoutingList.filter((x) => isThailandCoords(x.lat, x.lng));
+  const validRecce = isCollectionMode
+    ? locations.filter((x) => isThailandCoords(x.lat, x.lng))
+    : scoutingList.filter((x) => isThailandCoords(x.lat, x.lng));
   let googleMapsUrl = "";
   if (validRecce.length > 0) {
     const origin = `${validRecce[0].lat},${validRecce[0].lng}`;
@@ -441,11 +636,11 @@ export default function InteractiveMap({
   const totalDistance = calculateTotalDistance(scoutingList);
 
   return (
-    <div className="bg-white border-[2.5px] border-[#285185] rounded-[24px] shadow-[5px_5px_0px_#183354] overflow-hidden flex flex-col h-[calc(100vh-110px)] sticky top-4">
-      {/* Map Control Header */}
-      <div className="bg-[#f0f6fb] px-3.5 py-2.5 border-b-2 border-[#285185] flex flex-wrap items-center justify-between gap-2 shrink-0">
+    <div className="bg-white flex flex-col h-full w-full overflow-hidden">
+      {/* Map Control Header - Travel Flatlay Theme */}
+      <div className="bg-[#f0f5f8] px-3.5 py-2.5 border-b-2 border-[#285185] flex flex-wrap items-center justify-between gap-2 shrink-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="bg-[#ccd9e2] border border-[#285185] rounded-lg px-2 py-0.5 text-xs font-black text-[#1b3558]">
+          <span className="bg-[#285185] text-white rounded-lg px-2 py-0.5 text-xs font-black">
             🗺️ Live Map
           </span>
           <span className="text-xs font-black text-[#1b3558]">
@@ -454,24 +649,24 @@ export default function InteractiveMap({
               : `${locations.filter((l) => l.lat && l.lng).length} หมุดพิกัด`}
           </span>
 
-          {/* Filter only pinned toggle */}
-          {onToggleFilterOnlyPinned && (
+          {/* Filter only pinned toggle (Show only outside collection mode) */}
+          {!isCollectionMode && onToggleFilterOnlyPinned && (
             <button
               onClick={onToggleFilterOnlyPinned}
               disabled={scoutingList.length === 0}
-              className={`btn text-xs px-2.5 py-1 rounded-xl font-black flex items-center gap-1 transition ${
+              className={`text-xs px-2.5 py-1 rounded-xl font-black flex items-center gap-1 transition border ${
                 filterOnlyPinned
-                  ? "bg-[#f43f5e] border-[#be123c] text-white shadow-[2px_2px_0px_#881337]"
+                  ? "bg-[#d67940] border-[#a8521d] text-white shadow-xs"
                   : scoutingList.length > 0
-                  ? "bg-white border-[#f43f5e] text-[#be123c] hover:bg-rose-50 shadow-[2px_2px_0px_#f43f5e]"
+                  ? "bg-white border-[#285185] text-[#285185] hover:bg-[#ccd9e2]/30 shadow-xs"
                   : "bg-slate-100 border-slate-300 text-slate-400 cursor-not-allowed opacity-60"
               }`}
               title={scoutingList.length === 0 ? "ยังไม่มีหมุดที่ปักไว้" : "สลับแสดงเฉพาะจุดที่ปักหมุด"}
             >
               <span>{filterOnlyPinned ? "🗺️ แสดงทั้งหมด" : "📌 เฉพาะที่ปักหมุด"}</span>
               <span
-                className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
-                  filterOnlyPinned ? "bg-white text-rose-700" : "bg-rose-100 text-rose-800"
+                className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
+                  filterOnlyPinned ? "bg-white text-[#d67940]" : "bg-[#ccd9e2] text-[#1b3558]"
                 }`}
               >
                 {scoutingList.length}
@@ -479,25 +674,25 @@ export default function InteractiveMap({
             </button>
           )}
 
-          {/* Clear pins button */}
-          {onClearScout && scoutingList.length > 0 && (
+          {/* Clear pins button (Show only outside collection mode) */}
+          {!isCollectionMode && onClearScout && scoutingList.length > 0 && (
             <button
               onClick={onClearScout}
-              className="btn text-xs px-2.5 py-1 rounded-xl font-black bg-white hover:bg-rose-50 border border-rose-300 text-rose-700 shadow-[2px_2px_0px_#fca5a5] flex items-center gap-1 transition"
+              className="text-xs px-2.5 py-1 rounded-xl font-black bg-white hover:bg-rose-50 border border-rose-300 text-rose-700 flex items-center gap-1 transition shadow-xs"
               title="ล้างหมุดสำรวจทั้งหมด"
             >
-              <span>🗑️ ล้างหมุด</span>
+              <span>🗑️ ล้าง</span>
             </button>
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <button
             onClick={handleFitAll}
-            className="btn btn-blue text-xs px-3 py-1 rounded-xl font-black"
+            className="text-xs px-2.5 py-1 rounded-xl font-bold bg-white hover:bg-[#ccd9e2]/40 text-[#285185] border border-[#285185] shadow-xs transition"
             title="ซูมออกดูระยะห่างของหมุดทั้งหมด"
           >
-            🔍 ซูมดูทั้งหมด
+            🔍 รวมมุมมอง
           </button>
 
           {googleMapsUrl && (
@@ -505,9 +700,9 @@ export default function InteractiveMap({
               href={googleMapsUrl}
               target="_blank"
               rel="noreferrer"
-              className="btn btn-mint text-xs px-3 py-1 rounded-xl font-black"
+              className="text-xs px-2.5 py-1 rounded-xl font-black bg-[#d67940] hover:bg-[#c06530] text-white border border-[#a8521d] shadow-xs transition"
             >
-              🚀 เปิด Route
+              🚀 นำทาง
             </a>
           )}
         </div>
@@ -515,25 +710,25 @@ export default function InteractiveMap({
 
       {/* Selected Location Pill */}
       {selectedLocation && (
-        <div className="bg-white px-4 py-2 border-b border-slate-200 flex items-center justify-between text-xs shrink-0">
+        <div className="bg-[#fff7ed] px-3.5 py-2 border-b border-[#fed7aa] flex items-center justify-between text-xs shrink-0">
           <div className="flex items-center gap-1.5 truncate">
-            <span className="text-rose-600 font-bold shrink-0">🎯 ปักจุด:</span>
-            <span className="font-black text-slate-900 truncate">
+            <span className="text-[#d67940] font-black shrink-0">🎯 เลือก:</span>
+            <span className="font-black text-[#1b3558] truncate">
               {selectedLocation.name_th} ({selectedLocation.province})
             </span>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={() => onToggleScout(selectedLocation)}
-              className="btn btn-mint text-[11px] px-2.5 py-0.5 rounded-lg font-black shrink-0"
+              className="bg-[#285185] text-white text-[11px] px-2.5 py-0.5 rounded-lg font-black shrink-0 hover:bg-[#183354] transition"
             >
               {scoutingList.some((x) => x.id === selectedLocation.id) ? "✓ ปักแล้ว" : "+ ปักหมุด"}
             </button>
             {onDeselect && (
               <button
                 onClick={onDeselect}
-                className="w-5 h-5 rounded-full bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-700 flex items-center justify-center text-xs font-black transition cursor-pointer"
-                title="ยกเลิกการเลือก (Deselect)"
+                className="w-5 h-5 rounded-full bg-white hover:bg-rose-100 text-slate-500 hover:text-rose-700 flex items-center justify-center text-xs font-black transition cursor-pointer border border-slate-200"
+                title="ยกเลิกการเลือก"
               >
                 ✕
               </button>
@@ -542,21 +737,45 @@ export default function InteractiveMap({
         </div>
       )}
 
-      {/* Recce Distance Bar */}
-      {validRecce.length >= 1 && (
-        <div className="bg-[#fffbeb] px-4 py-1.5 border-b border-[#fef08a] flex items-center justify-between text-[11px] text-[#78350f] font-bold shrink-0">
-          <div className="flex items-center gap-2">
-            <span>
-              📍 เส้นทางสำรวจ {validRecce.length} จุด (เส้นประฟ้า)
+      {/* Recce Distance Bar (Show when viewing pinned locations or a collection) */}
+      {(filterOnlyPinned || isCollectionMode) && validRecce.length >= 1 && (
+        <div className="bg-[#fff7ed] px-4 py-2 border-b border-[#fed7aa] flex items-center justify-between text-xs text-[#7c2d12] font-bold shrink-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="flex items-center gap-1">
+              🚗 <strong className="font-black">{isCollectionMode ? "เส้นทางในกล่อง:" : "เส้นทางวิ่งจริง:"}</strong> {validRecce.length} จุด
             </span>
             {validRecce.length >= 2 && (
-              <span className="font-black font-mono">
-                ~{totalDistance} กม.
-              </span>
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Leg Distances and Total Distance */}
+                <div className="flex items-center gap-1.5 text-[11px] font-bold flex-wrap">
+                  {Array.from({ length: validRecce.length - 1 }).map((_, legIdx) => {
+                    const legColor = LEG_COLORS[legIdx % LEG_COLORS.length];
+                    const legDist = legDistancesKm[legIdx] !== undefined 
+                      ? legDistancesKm[legIdx] 
+                      : null;
+
+                    return (
+                      <span
+                        key={legIdx}
+                        className="px-2 py-0.5 rounded-lg text-white font-bold font-mono flex items-center gap-1 shadow-2xs"
+                        style={{ backgroundColor: legColor.stroke }}
+                      >
+                        <span>จุด {legIdx + 1} ไป {legIdx + 2}:</span>
+                        <span>{legDist !== null ? `${legDist} กม.` : "..."}</span>
+                      </span>
+                    );
+                  })}
+
+                  <span className="px-2.5 py-0.5 rounded-lg bg-[#285185] text-white font-black font-mono shadow-2xs flex items-center gap-1">
+                    <span>รวมทั้งหมด:</span>
+                    <span>{roadDistanceKm !== null ? roadDistanceKm : totalDistance} กม.</span>
+                  </span>
+                </div>
+              </div>
             )}
           </div>
           <div className="flex items-center gap-2">
-            {onToggleFilterOnlyPinned && (
+            {!isCollectionMode && onToggleFilterOnlyPinned && (
               <button
                 onClick={onToggleFilterOnlyPinned}
                 className="hover:underline text-amber-900 font-bold"
@@ -564,7 +783,7 @@ export default function InteractiveMap({
                 {filterOnlyPinned ? "← แสดงหมุดทั้งหมด" : "กรองเฉพาะหมุดนี้"}
               </button>
             )}
-            {onClearScout && (
+            {!isCollectionMode && onClearScout && (
               <button
                 onClick={onClearScout}
                 className="hover:underline text-rose-700 font-bold flex items-center gap-0.5"
