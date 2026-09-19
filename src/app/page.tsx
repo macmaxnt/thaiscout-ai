@@ -11,7 +11,7 @@ import {
 import RagModal from "@/components/RagModal";
 import HostPortal from "@/components/HostPortal";
 import ProvinceSelector from "@/components/ProvinceSelector";
-import { detectProvinceFromText, getProvincesInRegion } from "@/data/provinces";
+import { detectProvinceFromText, getProvincesInRegion, REGION_LIST } from "@/data/provinces";
 
 // Dynamic import for Leaflet map (client-only)
 const InteractiveMap = dynamic(() => import("@/components/InteractiveMap"), {
@@ -39,7 +39,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<"search" | "scout">("search");
   const [totalDbMatches, setTotalDbMatches] = useState<number>(8628);
   const [currentLimit, setCurrentLimit] = useState<number>(400);
-  const [visibleCardCount, setVisibleCardCount] = useState<number>(40);
+  const [filterRegion, setFilterRegion] = useState<string>("ทั้งหมด");
   const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
   const [customLocations, setCustomLocations] = useState<any[]>([
     {
@@ -117,14 +117,14 @@ export default function Home() {
     { title: "🌊 ริมโขงสโลว์ไลฟ์", text: "ถนนคนเดินริมแม่น้ำโขง บ้านไม้โบราณ หมอกยามเช้า", prov: "เลย" },
   ];
 
-  const handleSearch = async (targetBrief = brief, targetProv = province, limitToFetch = 400) => {
+  const handleSearch = async (targetBrief = brief, targetProv = province, limitToFetch?: number) => {
     setLoading(true);
     // When scouting/searching, clear active selection so the map shows the entire overview
     setSelectedLocation(null);
 
     // Auto-detect province if brief contains province name/alias
     let provToSend = targetProv;
-    if (targetProv === "all") {
+    if (targetProv === "all" && targetBrief.trim().length > 0) {
       const detected = detectProvinceFromText(targetBrief);
       if (detected.detectedProvince) {
         provToSend = detected.detectedProvince;
@@ -247,33 +247,32 @@ export default function Home() {
     }
   }, [mapPinSelectedId]);
 
-  useEffect(() => {
-    setVisibleCardCount(40);
-  }, [brief, province, filterOnlyPinned, activeTab]);
-
   return (
     <div className="min-h-screen py-4 px-3 sm:px-6 w-full flex flex-col gap-4">
       {/* 🗺️ 1. Top Navbar */}
-      <header className="bg-white border-[2.5px] border-[#7c3aed] rounded-[20px] shadow-[4px_4px_0px_#6d28d9] px-4 py-3 sm:px-6 sm:py-3.5 flex flex-wrap items-center justify-between gap-3 shrink-0">
+      <header className="bg-white border-[2.5px] border-[#285185] rounded-[20px] shadow-[4px_4px_0px_#183354] px-4 py-3 sm:px-6 sm:py-3.5 flex flex-wrap items-center justify-between gap-3 shrink-0">
         <div className="flex items-center gap-3">
-          <div className="bg-[#ddd6fe] border-2 border-[#7c3aed] rounded-xl px-2.5 py-1 shadow-[2px_2px_0px_#6d28d9] text-xl flex items-center justify-center">
+          <div className="bg-[#ccd9e2] border-2 border-[#285185] rounded-xl px-2.5 py-1 shadow-[2px_2px_0px_#183354] text-xl flex items-center justify-center">
             🗺️
           </div>
           <div>
-            <h1 className="text-lg sm:text-xl font-black text-[#4c1d95] tracking-tight leading-tight">
+            <h1 className="text-lg sm:text-xl font-black text-[#1b3558] tracking-tight leading-tight flex items-center gap-2">
               ThaiScout
+              <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-[#fcd9bd] text-[#7c2d12] border border-[#d67940]">
+                Creative Recce
+              </span>
             </h1>
           </div>
         </div>
 
         {/* 2-Sided Mode Switcher (สำหรับคนมาใช้ vs สำหรับเจ้าของเอางานมาลง) */}
-        <div className="bg-slate-100 border-2 border-slate-300 p-1 rounded-2xl flex items-center gap-1 shadow-[2px_2px_0px_#94a3b8]">
+        <div className="bg-[#f0f5f8] border-2 border-[#ccd9e2] p-1 rounded-2xl flex items-center gap-1 shadow-[2px_2px_0px_#285185]">
           <button
             onClick={() => setCurrentMode("scout")}
             className={`btn text-xs px-3.5 py-1.5 rounded-xl font-black transition ${
               currentMode === "scout"
-                ? "btn-blue shadow-[2px_2px_0px_#0369a1]"
-                : "bg-transparent border-transparent text-slate-600 hover:text-slate-900"
+                ? "bg-[#285185] text-white border-[#183354] shadow-[2px_2px_0px_#183354]"
+                : "bg-transparent border-transparent text-[#285185] hover:text-[#1b3558]"
             }`}
           >
             🎬 โหมดกองถ่าย (Scout & Recce)
@@ -310,13 +309,13 @@ export default function Home() {
         {/* === LEFT COLUMN: Brief Console & Multi-Column Results Grid === */}
         <div className="lg:col-span-7 xl:col-span-7 2xl:col-span-8 flex flex-col gap-4">
           
-          {/* Creative Brief Console (สีขาว Neo-Brutalist ตามตีมสไลด์ Lab 4) */}
-          <div className="bg-white border-[2.5px] border-[#0284c7] rounded-[22px] shadow-[4px_4px_0px_#0369a1] p-4 sm:p-5 flex flex-col gap-3">
+          {/* Creative Brief Console (Travel Flatlay Palette: Navy, Sky, Leather Amber) */}
+          <div className="bg-white border-[2.5px] border-[#285185] rounded-[22px] shadow-[4px_4px_0px_#183354] p-4 sm:p-5 flex flex-col gap-3">
             
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2">
-                <span className="bg-[#bae6fd] border border-[#0284c7] rounded-lg px-2.5 py-0.5 text-xs font-black text-[#0c4a6e] flex items-center gap-1">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                <span className="bg-[#ccd9e2] border border-[#285185] rounded-lg px-2.5 py-0.5 text-xs font-black text-[#1b3558] flex items-center gap-1">
+                  <Sparkles className="w-3.5 h-3.5 text-[#d67940]" />
                   Creative Brief Console
                 </span>
                 <span className="text-xs font-bold text-slate-500 hidden sm:inline">
@@ -327,7 +326,7 @@ export default function Home() {
 
             <div>
               <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-                ค้นหาโลเคชันถ่ายทำจาก <span className="text-[#0284c7]">Creative Brief</span>
+                ค้นหาโลเคชันถ่ายทำจาก <span className="text-[#285185]">Creative Brief</span>
               </h2>
               <p className="text-xs sm:text-sm font-semibold text-slate-700 mt-1">
                 พิมพ์บรรยากาศหรืออารมณ์ฉากที่ต้องการ หรือ <strong className="text-slate-900">เลือกดูรายภาค/รายจังหวัดแบบไม่ต้องพิมพ์</strong> ระบบจะดึงพิกัดจริงและปักหมุดบนแผนที่ดาวเทียมทันที
@@ -335,9 +334,9 @@ export default function Home() {
             </div>
 
             {/* Input Box */}
-            <div className="bg-[#f8fafc] border-2 border-slate-300 rounded-[18px] p-3.5 focus-within:border-[#0284c7] focus-within:shadow-[3px_3px_0px_#0369a1] transition">
+            <div className="bg-[#f0f5f8] border-2 border-[#ccd9e2] rounded-[18px] p-3.5 focus-within:border-[#285185] focus-within:shadow-[3px_3px_0px_#183354] transition">
               <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-black text-[#0c4a6e] uppercase font-mono">
+                <label className="block text-xs font-black text-[#1b3558] uppercase font-mono">
                   Brief
                 </label>
                 {brief && (
@@ -361,6 +360,61 @@ export default function Home() {
                 className="w-full bg-white border border-slate-300 rounded-xl p-3 text-xs sm:text-sm text-slate-900 font-bold placeholder:text-slate-500 focus:outline-none focus:border-[#0284c7] shadow-inner"
               />
 
+              {/* Region Buttons — แถวปุ่มเลือกภาค */}
+              <div className="flex flex-wrap gap-1.5 mt-3">
+                {/* ปุ่มทุกภาค (default) */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFilterRegion("ทั้งหมด");
+                    setProvince("all");
+                    handleSearch(brief, "all");
+                  }}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-black transition-all border ${
+                    filterRegion === "ทั้งหมด"
+                      ? "bg-[#0284c7] text-white border-[#0369a1] shadow-[1px_1px_0px_#0369a1]"
+                      : "bg-white text-slate-700 border-slate-300 hover:border-[#0284c7] hover:text-[#0284c7]"
+                  }`}
+                >
+                  <span>🌐</span>
+                  <span>ทุกภาค</span>
+                  <span className={`text-[10px] ${filterRegion === "ทั้งหมด" ? "text-sky-200" : "text-slate-400"}`}>(77)</span>
+                </button>
+
+                {/* ปุ่มแต่ละภาค */}
+                {REGION_LIST.filter((r) => r.id !== "all").map((reg) => {
+                  const regionKey = reg.id.replace("region:", "");
+                  const isActive = filterRegion === regionKey;
+                  return (
+                    <button
+                      key={reg.id}
+                      type="button"
+                      onClick={() => {
+                        setFilterRegion(regionKey);
+                        const targetProv = "region:" + regionKey;
+                        setProvince(targetProv);
+                        handleSearch(brief, targetProv);
+                      }}
+                      className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-black transition-all border ${
+                        isActive
+                          ? "bg-[#0284c7] text-white border-[#0369a1] shadow-[1px_1px_0px_#0369a1]"
+                          : "bg-white text-slate-700 border-slate-300 hover:border-[#0284c7] hover:text-[#0284c7]"
+                      }`}
+                    >
+                      <span>{reg.icon}</span>
+                      <span>
+                        {reg.name === "ภาคอีสาน (ตะวันออกเฉียงเหนือ)"
+                          ? "อีสาน"
+                          : reg.name.replace("ภาค", "")}
+                      </span>
+                      <span className={`text-[10px] ${isActive ? "text-sky-200" : "text-slate-400"}`}>
+                        ({reg.count})
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
               <div className="flex flex-col sm:flex-row gap-2.5 items-center justify-between mt-3">
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                   <ProvinceSelector
@@ -370,6 +424,8 @@ export default function Home() {
                       handleSearch(brief, newProv);
                     }}
                     allowAll={true}
+                    filterRegion={filterRegion}
+                    onFilterRegionChange={setFilterRegion}
                   />
                 </div>
 
@@ -475,7 +531,7 @@ export default function Home() {
                   : `ฐานข้อมูล ททท. ${totalDbMatches.toLocaleString()} พิกัด`}
               </span>
               <div className="font-mono text-xs sm:text-sm text-[#0284c7] font-black bg-[#f0f9ff] px-2.5 py-1 rounded-lg border border-[#bae6fd]">
-                แสดง {displayedLocations.length.toLocaleString()} โลเคชัน
+                แสดง {displayedLocations.length} โลเคชัน
               </div>
             </div>
           </div>
@@ -520,7 +576,7 @@ export default function Home() {
             <>
               <div ref={cardsTopRef} className="scroll-mt-4" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {displayedLocations.slice(0, visibleCardCount).map((loc) => {
+                {displayedLocations.map((loc) => {
                   const isSaved = scoutingList.some((x) => x.id === loc.id);
                   const isSelected = selectedLocation?.id === loc.id;
                   const recceIndex = scoutingList.findIndex((x) => x.id === loc.id);
@@ -531,8 +587,8 @@ export default function Home() {
                       onClick={() => handleSelectFromCard(loc)}
                       className={`rounded-[22px] p-4 sm:p-5 transition-all duration-200 cursor-pointer flex flex-col justify-between border-[3px] ${
                         isSelected
-                          ? "bg-gradient-to-br from-rose-50/90 via-white to-amber-50/70 border-[#e11d48] shadow-[6px_6px_0px_#9f1239] ring-4 ring-rose-300 scale-[1.01]"
-                          : "bg-white border-[#0284c7] shadow-[3px_3px_0px_#0369a1] hover:translate-x-[-2px] hover:translate-y-[-2px]"
+                          ? "bg-gradient-to-br from-amber-50/90 via-white to-sky-50/70 border-[#d67940] shadow-[6px_6px_0px_#a8521d] ring-4 ring-amber-200 scale-[1.01]"
+                          : "bg-white border-[#285185] shadow-[3px_3px_0px_#183354] hover:translate-x-[-2px] hover:translate-y-[-2px]"
                       }`}
                     >
                       <div>
@@ -545,19 +601,19 @@ export default function Home() {
                               เจ้าของโดยตรง (Verified Host)
                             </span>
                           ) : (
-                            <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-[#ddd6fe] text-[#4c1d95] border-[1.5px] border-[#7c3aed]">
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-[#ccd9e2] text-[#1b3558] border-[1.5px] border-[#285185]">
                               {loc.category}
                             </span>
                           )}
 
                           {loc.isCustomHost && loc.productionSpecs?.rate && (
-                            <span className="text-[10px] font-mono font-black px-2 py-0.5 rounded-md bg-[#fef08a] text-[#78350f] border border-[#d97706]">
+                            <span className="text-[10px] font-mono font-black px-2 py-0.5 rounded-md bg-[#fcd9bd] text-[#7c2d12] border border-[#d67940]">
                               💰 {loc.productionSpecs.rate}
                             </span>
                           )}
 
                           {loc.relevanceScore && (
-                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#bbf7d0] text-[#14532d] border-[1.5px] border-[#16a34a]">
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#fdf3eb] text-[#a8521d] border-[1.5px] border-[#d67940]">
                               Match {loc.relevanceScore}%
                             </span>
                           )}
@@ -579,8 +635,8 @@ export default function Home() {
                       </p>
 
                       {loc.hilight && (
-                        <div className="text-xs sm:text-sm bg-[#f5f3ff] border border-[#ddd6fe] p-2.5 rounded-xl text-[#4c1d95] font-semibold mb-2.5 leading-relaxed">
-                          ✨ <strong className="font-black text-[#3b0764]">จุดเด่น:</strong> {loc.hilight}
+                        <div className="text-xs sm:text-sm bg-[#fff7ed] border border-[#fcd9bd] p-2.5 rounded-xl text-[#7c2d12] font-semibold mb-2.5 leading-relaxed">
+                          ✨ <strong className="font-black text-[#431407]">จุดเด่น:</strong> {loc.hilight}
                         </div>
                       )}
 
@@ -651,7 +707,11 @@ export default function Home() {
 
                         {/* Facebook Page */}
                         <div className="flex items-center gap-1.5">
-                          <svg className="w-4 h-4 text-[#1877F2] shrink-0 fill-current" viewBox="0 0 24 24">
+                          <svg
+                            className="w-4 h-4 text-[#1877F2] shrink-0 fill-current"
+                            style={{ width: "16px", height: "16px", maxWidth: "16px", maxHeight: "16px", flexShrink: 0 }}
+                            viewBox="0 0 24 24"
+                          >
                             <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
                           </svg>
                           <a
@@ -716,10 +776,10 @@ export default function Home() {
                             e.stopPropagation();
                             setRagTargetLocation(loc);
                           }}
-                          className="btn btn-purple text-xs sm:text-sm px-3 py-1.5 rounded-xl font-black flex items-center gap-1.5 shadow-[2px_2px_0px_#6d28d9]"
+                          className="btn bg-[#f0f5f8] border-2 border-[#285185] text-[#1b3558] hover:bg-[#ccd9e2] text-xs sm:text-sm px-3 py-1.5 rounded-xl font-black flex items-center gap-1.5 shadow-[2px_2px_0px_#183354]"
                           title="เปิด AI RAG วิเคราะห์มุมกล้อง ระเบียบ และถามตอบเจาะลึก"
                         >
-                          <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                          <Sparkles className="w-3.5 h-3.5 text-[#d67940]" />
                           AI RAG
                         </button>
                       </div>
@@ -731,8 +791,8 @@ export default function Home() {
                         }}
                         className={`btn text-xs sm:text-sm px-3.5 py-1.5 rounded-xl font-black ${
                           isSaved 
-                            ? "bg-[#fecdd3] border-[#e11d48] text-[#881337] shadow-[2px_2px_0px_#be123c]" 
-                            : "btn-mint shadow-[2px_2px_0px_#15803d]"
+                            ? "bg-[#edd8d8] border-[#6f4849] text-[#4a2829] shadow-[2px_2px_0px_#4d2f30]" 
+                            : "bg-[#285185] hover:bg-[#1b3558] border-2 border-[#183354] text-white shadow-[2px_2px_0px_#183354]"
                         }`}
                       >
                         {isSaved ? "✓ ปักแล้ว" : "+ ปักหมุด"}
@@ -743,27 +803,7 @@ export default function Home() {
               })}
             </div>
 
-            {/* Pagination Controls for Card Grid */}
-            {visibleCardCount < displayedLocations.length && (
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 py-6">
-                <button
-                  type="button"
-                  onClick={() => setVisibleCardCount((prev) => Math.min(prev + 50, displayedLocations.length))}
-                  className="btn btn-blue text-xs sm:text-sm px-6 py-2.5 rounded-xl font-black shadow-[3px_3px_0px_#0369a1] hover:scale-[1.02] active:scale-95 transition"
-                >
-                  + โหลดการ์ดในรายการเพิ่มอีก (+50) (แสดงแล้ว {Math.min(visibleCardCount, displayedLocations.length).toLocaleString()} จาก {displayedLocations.length.toLocaleString()} แห่ง)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setVisibleCardCount(displayedLocations.length)}
-                  className="btn bg-white border-2 border-slate-300 hover:border-slate-400 text-slate-700 hover:bg-slate-50 text-xs px-4 py-2.5 rounded-xl font-bold transition shadow-xs"
-                >
-                  แสดงการ์ดทั้งหมด ({displayedLocations.length.toLocaleString()})
-                </button>
-              </div>
-            )}
-
-            {/* Load More Button (API) */}
+            {/* Load More Button */}
             {displayedLocations.length < totalDbMatches && activeTab === "search" && !filterOnlyPinned && (
               <div className="text-center py-6">
                 <button

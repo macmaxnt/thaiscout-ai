@@ -86,21 +86,55 @@ export async function POST(req: Request) {
       }
 
       // 4. Keyword Scoring (when brief is provided)
-      for (const token of queryTokens) {
-        if (item.name_th.toLowerCase().includes(token)) score += 30;
-        if (item.hilight.toLowerCase().includes(token)) score += 20;
-        if (item.sub_type.toLowerCase().includes(token)) score += 15;
-        if (item.detail.toLowerCase().includes(token)) score += 10;
-        if (item.category.toLowerCase().includes(token)) score += 8;
-        if (item.province.toLowerCase().includes(token)) score += 25;
+      let tokenHits = 0;
+      let keywordScore = 0;
+
+      if (!isBriefEmpty) {
+        for (const token of queryTokens) {
+          let hit = false;
+          if (item.name_th.toLowerCase().includes(token)) { keywordScore += 40; hit = true; }
+          if (item.hilight && item.hilight.toLowerCase().includes(token)) { keywordScore += 25; hit = true; }
+          if (item.sub_type && item.sub_type.toLowerCase().includes(token)) { keywordScore += 20; hit = true; }
+          if (item.detail && item.detail.toLowerCase().includes(token)) { keywordScore += 15; hit = true; }
+          if (item.category && item.category.toLowerCase().includes(token)) { keywordScore += 10; hit = true; }
+          if (item.province && item.province.toLowerCase().includes(token)) { keywordScore += 25; hit = true; }
+          if (hit) tokenHits++;
+        }
+
+        if (detected.matchedAlias && (item.name_th.includes(detected.matchedAlias) || (item.detail && item.detail.includes(detected.matchedAlias)))) {
+          keywordScore += 30;
+          tokenHits++;
+        }
+
+        // Strict filter: If user provided search brief, item MUST have at least 1 keyword hit
+        if (tokenHits === 0) {
+          return { item, score: 0 };
+        }
+
+        // Multi-token match synergy (items matching 2+ words get huge boost)
+        if (tokenHits > 1) {
+          keywordScore += tokenHits * 80;
+        }
+
+        // Sub-word mountain/nature boost if query relates to doi/mountain
+        if (queryTokens.some((t: string) => t.includes("ดอย") || t.includes("ภู") || t.includes("เขา"))) {
+          if (item.name_th.includes("ดอย") || item.name_th.includes("ภู") || item.name_th.includes("เขา")) {
+            keywordScore += 40;
+          }
+        }
+
+        // Penalty for indoor museums / municipal buildings when user didn't ask for museums
+        if (
+          item.name_th.includes("พิพิธภัณฑ์") &&
+          !queryTokens.some((t: string) => t.includes("พิพิธภัณฑ์"))
+        ) {
+          keywordScore -= 60;
+        }
+
+        score += keywordScore;
       }
 
-      // 5. Boost for famous landmarks or district matches
-      if (detected.matchedAlias && (item.name_th.includes(detected.matchedAlias) || item.detail.includes(detected.matchedAlias))) {
-        score += 25;
-      }
-
-      // Quality & Coordinate Boosts (places with GPS coordinates get pinned nicely)
+      // Quality & Coordinate Boosts (only applied to active matches or during empty-brief browsing)
       if (item.lat && item.lng) score += 15;
       if (item.tel) score += 5;
       if (item.hilight && item.hilight.length > 5) score += 10;
@@ -113,22 +147,70 @@ export async function POST(req: Request) {
 
     let selectedItems: typeof scored = [];
 
-    if (isBriefEmpty && !effectiveProvince && !isRegionFilter) {
-      // Nationwide browsing without brief:
-      // Return ALL valid locations across Thailand (all 8,578+ locations)!
-      selectedItems = validMatches;
-    } else {
-      // Province, Region, or Keyword Search:
+    if (!isBriefEmpty) {
+      // 1. Keyword Search: return genuine matching locations (top 35-40 items)
       validMatches.sort((a, b) => b.score - a.score);
-      const targetLimit = limit || (effectiveProvince ? 1000 : isRegionFilter ? 800 : 300);
-      selectedItems = validMatches.slice(0, targetLimit);
+      const searchLimit = limit ? Math.min(limit, 50) : 35;
+      selectedItems = validMatches.slice(0, searchLimit);
+    } else if (!effectiveProvince && !isRegionFilter) {
+      // 2. Nationwide browsing without brief:
+      // Return a clean sample of 1 top landmark per province (~70-77 pins)
+      // This keeps the map uncluttered, fast, and representative of all regions
+      const byProvince: Record<string, typeof scored> = {};
+      for (const s of validMatches) {
+        const prov = s.item.province || "อื่นๆ";
+        if (!byProvince[prov]) byProvince[prov] = [];
+        byProvince[prov].push(s);
+      }
+
+      // Sort each province's items by score
+      for (const prov of Object.keys(byProvince)) {
+        byProvince[prov].sort((a, b) => b.score - a.score);
+      }
+
+      // Sample 1 top landmark per province
+      const provKeys = Object.keys(byProvince);
+      for (const prov of provKeys) {
+        if (byProvince[prov][0]) {
+          selectedItems.push(byProvince[prov][0]);
+        }
+      }
+    } else if (isRegionFilter) {
+      // 3. Region browsing without brief:
+      // Return top 35-40 locations in this region (evenly sampled across provinces in this region)
+      const byProvince: Record<string, typeof scored> = {};
+      for (const s of validMatches) {
+        const prov = s.item.province || "อื่นๆ";
+        if (!byProvince[prov]) byProvince[prov] = [];
+        byProvince[prov].push(s);
+      }
+      for (const prov of Object.keys(byProvince)) {
+        byProvince[prov].sort((a, b) => b.score - a.score);
+      }
+
+      const provKeys = Object.keys(byProvince);
+      const targetCount = limit || 40;
+      const rounds = Math.ceil(targetCount / Math.max(provKeys.length, 1));
+      for (let round = 0; round < rounds; round++) {
+        for (const prov of provKeys) {
+          if (byProvince[prov][round]) {
+            selectedItems.push(byProvince[prov][round]);
+            if (selectedItems.length >= targetCount) break;
+          }
+        }
+        if (selectedItems.length >= targetCount) break;
+      }
+    } else {
+      // 4. Specific Province browsing without brief:
+      // Return top 50 locations for that province
+      validMatches.sort((a, b) => b.score - a.score);
+      selectedItems = validMatches.slice(0, limit || 50);
     }
 
     const results = selectedItems.map((s) => {
       const item = s.item;
       return {
         ...item,
-        detail: item.detail ? item.detail.slice(0, 300) : "",
         relevanceScore: Math.min(Math.round(s.score * 2), 99),
         hasVerifiedCoords: !!(item.lat && item.lng),
         hasOperatingHours: !!item.time,

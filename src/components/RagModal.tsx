@@ -144,6 +144,24 @@ export default function RagModal({
             </div>
           ) : dossier ? (
             <>
+              {/* ⚠️ ข้อ 3: แสดงชัดว่าส่วนไหนเป็นข้อมูลจริง / ส่วนไหน AI วิเคราะห์ */}
+              <div className="bg-amber-50 border-2 border-amber-300 rounded-[16px] p-3 shadow-[2px_2px_0px_#d97706] flex items-start gap-2.5">
+                <span className="text-base shrink-0">🔍</span>
+                <div className="text-[11px] font-bold text-amber-900 leading-relaxed">
+                  <span className="font-black">แหล่งข้อมูลในหน้านี้มี 2 ประเภท:</span>
+                  <div className="mt-1.5 space-y-1">
+                    <div className="flex items-start gap-1.5">
+                      <span className="bg-[#0284c7] text-white text-[9px] font-black px-1.5 py-0.5 rounded shrink-0 mt-0.5">ททท.</span>
+                      <span><strong>ข้อมูลจริง:</strong> รายละเอียดสถานที่ พิกัด GPS เบอร์ติดต่อ — ดึงตรงจากฐานข้อมูล Tourism Authority of Thailand (TAT) Corpus ID #{location.id}</span>
+                    </div>
+                    <div className="flex items-start gap-1.5">
+                      <span className="bg-amber-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded shrink-0 mt-0.5">AI</span>
+                      <span><strong>การวิเคราะห์โดย AI:</strong> มุมกล้อง แสง โลจิสติกส์ ระเบียบโดรน — สร้างจาก RAG Engine โดยอ้างอิงข้อมูล ททท. + กฎหมายไทย <span className="text-amber-700">ควรยืนยันกับหน่วยงานจริงก่อนเข้ากองถ่ายเสมอ</span></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* 📄 Full Original Description from TAT */}
               {location.detail && (
                 <div className="bg-white border-2 border-slate-300 rounded-[20px] p-4 shadow-[3px_3px_0px_#94a3b8]">
