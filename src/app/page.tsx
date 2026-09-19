@@ -35,6 +35,58 @@ const InteractiveMap = dynamic(() => import("@/components/InteractiveMap"), {
   ),
 });
 
+// Smart Highlight component: accurately detects whether 3-line clamp is actually truncated using DOM scrollHeight
+function HighlightBox({
+  text,
+  isExpanded,
+  onToggleExpand,
+}: {
+  text: string;
+  isExpanded: boolean;
+  onToggleExpand: (e: React.MouseEvent) => void;
+}) {
+  const textRef = useRef<HTMLDivElement>(null);
+  const [isClamped, setIsClamped] = useState(false);
+
+  useEffect(() => {
+    const el = textRef.current;
+    if (!el) return;
+
+    // Check if text is overflowing its visible height when clamped
+    const checkOverflow = () => {
+      if (!isExpanded) {
+        // el.scrollHeight > el.clientHeight with 1px buffer indicates actual truncation
+        setIsClamped(el.scrollHeight > el.clientHeight + 1);
+      }
+    };
+
+    checkOverflow();
+    window.addEventListener("resize", checkOverflow);
+    return () => window.removeEventListener("resize", checkOverflow);
+  }, [text, isExpanded]);
+
+  return (
+    <div className="text-xs text-slate-700 bg-[#f8fafc] p-2.5 rounded-xl border border-slate-200 leading-relaxed mb-2.5 font-normal">
+      <div
+        ref={textRef}
+        className={isExpanded ? "" : "line-clamp-3 overflow-hidden"}
+      >
+        <span className="text-[#d67940] font-black mr-1 text-[11px]">✨ ไฮไลท์:</span>
+        {text}
+      </div>
+      {(isClamped || isExpanded) && (
+        <button
+          type="button"
+          onClick={onToggleExpand}
+          className="text-[11px] font-black text-[#285185] hover:text-[#d67940] hover:underline mt-1.5 flex items-center gap-0.5 cursor-pointer"
+        >
+          {isExpanded ? "▲ ย่อเนื้อหา" : "▼ ดูเพิ่มเติม..."}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function Home() {
   // Authentication session state
   const [currentUser, setCurrentUser] = useState<MockUser | null>(null);
@@ -63,7 +115,7 @@ export default function Home() {
   const [filterOnlyPinned, setFilterOnlyPinned] = useState(false);
   const [ragTargetLocation, setRagTargetLocation] = useState<any | null>(null);
   const [socialModalLocation, setSocialModalLocation] = useState<any | null>(null);
-  const [activeTab, setActiveTab] = useState<"search" | "scout">("search");
+  const [activeTab, setActiveTab] = useState<"search" | "scout" | "collection">("search");
   const [totalDbMatches, setTotalDbMatches] = useState<number>(8628);
   const [currentLimit, setCurrentLimit] = useState<number>(400);
   const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
@@ -1057,8 +1109,6 @@ export default function Home() {
                     const recceIndex = scoutingList.findIndex((x) => x.id === loc.id);
                     const isHighlightExpanded = !!expandedIds[loc.id];
                     const fullText = loc.hilight || loc.detail || "";
-                    // Thai font in 3-line clamp fits ~160-180 chars. Only show ดูเพิ่มเติม if text actually exceeds 160 chars
-                    const isTextLong = fullText.length > 160;
 
                     // Check which collections contain this location
                     const parentCollections = collections.filter((c) =>
@@ -1254,23 +1304,13 @@ export default function Home() {
                             <span>{loc.province} {loc.district ? `· อ.${loc.district}` : ""}</span>
                           </p>
 
-                          {/* Hilight Description (ดึงจากฟิลด์ไฮไลท์ของ ททท. ตกแต่งให้กระชับและสมบูรณ์ พร้อมปุ่มดูเพิ่มเติมเพื่อขยายเฉพาะกล่องนั้น) */}
+                          {/* Hilight Description (ดึงจากฟิลด์ไฮไลท์ของ ททท. ตกแต่งให้กระชับและสมบูรณ์ แสดงปุ่มดูเพิ่มเติมเฉพาะเมื่อข้อความล้น 3 บรรทัดจริงๆ) */}
                           {fullText && (
-                            <div className="text-xs text-slate-700 bg-[#f8fafc] p-2.5 rounded-xl border border-slate-200 leading-relaxed mb-2.5 font-normal">
-                              <div className={isHighlightExpanded ? "" : "line-clamp-3"}>
-                                <span className="text-[#d67940] font-black mr-1 text-[11px]">✨ ไฮไลท์:</span>
-                                {fullText}
-                              </div>
-                              {isTextLong && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => toggleExpand(loc.id, e)}
-                                  className="text-[11px] font-black text-[#285185] hover:text-[#d67940] hover:underline mt-1.5 flex items-center gap-0.5 cursor-pointer"
-                                >
-                                  {isHighlightExpanded ? "▲ ย่อเนื้อหา" : "▼ ดูเพิ่มเติม..."}
-                                </button>
-                              )}
-                            </div>
+                            <HighlightBox
+                              text={fullText}
+                              isExpanded={isHighlightExpanded}
+                              onToggleExpand={(e) => toggleExpand(loc.id, e)}
+                            />
                           )}
 
                           {/* Coordinates */}
@@ -1412,8 +1452,11 @@ export default function Home() {
         activeCollectionId={activeCollectionId}
         onSelectCollection={(colId) => {
           setActiveCollectionId(colId);
-          setActiveTab("scout");
+          setActiveTab("collection");
           setFilterOnlyPinned(false);
+          handleDeselect();
+          setSelectedRegion("ทั้งหมด");
+          setSelectedProvince("all");
         }}
         onCreateCollection={handleCreateCollection}
         onRenameCollection={handleRenameCollection}
