@@ -99,10 +99,14 @@ export default function Home() {
       const data = await res.json();
       if (data.success) {
         setResults(data.locations);
-        if (data.totalMatches) {
+        if (data.totalMatches !== undefined) {
           setTotalDbMatches(data.totalMatches);
         }
         setGeminiAnalysis(data.geminiAnalysis || null);
+        // Switch back to search results view
+        setActiveTab("search");
+        setFilterOnlyPinned(false);
+        setActiveCollectionId(null);
         // Keep selectedLocation null so the map frames all pins without flying into any random pin
         setSelectedLocation(null);
       }

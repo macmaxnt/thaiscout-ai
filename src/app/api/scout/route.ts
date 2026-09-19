@@ -112,11 +112,13 @@ export async function POST(req: Request) {
         score += 15;
       }
 
-      // 4. Strict Keyword Scoring (when brief is provided)
+      // 4. Hybrid Intelligent Scoring (Direct User Words + Gemini Semantic Expansion)
       if (!isBriefEmpty) {
         let userHits = 0;
+        let semanticHits = 0;
         let keywordScore = 0;
 
+        // 4.1 Direct User Query Tokens (Highest weight: 30-80 pts)
         for (const token of activeTokens) {
           let hit = false;
           if (item.name_th.toLowerCase().includes(token)) { keywordScore += 80; hit = true; }
@@ -134,26 +136,30 @@ export async function POST(req: Request) {
           userHits++;
         }
 
-        // STRICT RULE: If NO user tokens matched at all -> STRICT NO MATCH (Score 0)
-        // If the TAT dataset doesn't have it, we honestly return 0 without forcing!
-        if (userHits === 0) {
+        // 4.2 Gemini AI Semantic Expanded Tokens (Deconstructs abstract mood like "บรรยากาศโรแมนติก", "ลึกลับ" into physical terrain)
+        for (const token of expandedTokens) {
+          if (activeTokens.includes(token)) continue;
+          let hit = false;
+          if (item.name_th.toLowerCase().includes(token)) { keywordScore += 40; hit = true; }
+          else if (item.hilight && item.hilight.toLowerCase().includes(token)) { keywordScore += 25; hit = true; }
+          else if (item.sub_type && item.sub_type.toLowerCase().includes(token)) { keywordScore += 20; hit = true; }
+          else if (item.detail && item.detail.toLowerCase().includes(token)) { keywordScore += 15; hit = true; }
+          if (hit) semanticHits++;
+        }
+
+        // QUALIFICATION RULE:
+        // A location qualifies if:
+        // 1. At least 1 direct user word matches (userHits > 0)
+        // 2. OR (for abstract mood/atmosphere briefs where direct word is rare in official database),
+        //    at least 1 high-relevance semantic physical token matches from Gemini analysis
+        if (userHits === 0 && semanticHits === 0) {
           return { item, score: 0 };
         }
 
-        // Multi-keyword synergy (matching 2+ query words gives significant boost)
-        if (userHits > 1) {
-          keywordScore += userHits * 50;
+        // Direct user hits get priority multiplier
+        if (userHits > 0) {
+          keywordScore += userHits * 40;
         }
-
-        // Gemini AI Expanded Semantic Bonus (ONLY as a bonus to items that already matched user query)
-        let semanticBonus = 0;
-        for (const token of expandedTokens) {
-          if (activeTokens.includes(token)) continue;
-          if (item.name_th.toLowerCase().includes(token)) semanticBonus += 25;
-          else if (item.hilight && item.hilight.toLowerCase().includes(token)) semanticBonus += 15;
-          else if (item.detail && item.detail.toLowerCase().includes(token)) semanticBonus += 10;
-        }
-        keywordScore += Math.min(semanticBonus, 60);
 
         score += keywordScore;
       }
