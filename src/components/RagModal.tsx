@@ -108,18 +108,31 @@ export default function RagModal({ location, brief, onClose }: RagModalProps) {
         {/* Modal Body */}
         <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1 bg-[#fafaf9]">
           
-          {loading ? (
-            <div className="py-16 flex flex-col items-center justify-center text-center">
-              <div className="w-10 h-10 border-4 border-[#7c3aed] border-t-transparent rounded-full animate-spin mb-3"></div>
-              <p className="font-black text-slate-700 text-sm">
-                กำลังดึงบริบทสถานที่ & วิเคราะห์ความเป็นไปได้ของกองถ่าย (RAG Retrieval)...
-              </p>
-              <p className="text-xs font-bold text-slate-400 mt-1">
-                Applying Grounded Facts & Safety Refusal Rules
-              </p>
-            </div>
-          ) : dossier ? (
+          {loading ? (\n            <div className=\"py-16 flex flex-col items-center justify-center text-center\">\n              <div className=\"w-10 h-10 border-4 border-[#7c3aed] border-t-transparent rounded-full animate-spin mb-3\"></div>\n              <p className=\"font-black text-slate-700 text-sm\">\n                กำลังดึงบริบทสถานที่ & วิเคราะห์ความเป็นไปได้ของกองถ่าย (RAG Retrieval)...\n              </p>\n              <p className=\"text-xs font-bold text-slate-400 mt-1\">\n                Applying Grounded Facts & Safety Refusal Rules\n              </p>\n            </div>\n          ) : dossier ? (
             <>
+              {/* 📄 Full Original Description from TAT */}
+              {location.detail && (
+                <div className="bg-white border-2 border-slate-300 rounded-[20px] p-4 shadow-[3px_3px_0px_#94a3b8]">
+                  <div className="flex items-center justify-between mb-2 text-slate-800 font-black text-sm">
+                    <span className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-[#0284c7]" />
+                      ข้อมูลรายละเอียดสถานที่ฉบับเต็ม (TAT Official Description)
+                    </span>
+                    <span className="text-[10px] font-mono text-slate-400 font-bold">
+                      {location.detail.length} ตัวอักษร
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-700 leading-relaxed font-medium bg-[#f8fafc] p-3 rounded-xl border border-slate-200 whitespace-pre-line">
+                    {location.detail}
+                  </p>
+                  {location.activity && (
+                    <p className="text-xs text-[#0c4a6e] font-bold mt-2">
+                      🎯 กิจกรรมที่ ททท. แนะนำ: {location.activity}
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* 🎬 1. Cinematic & Lighting Analysis */}
               <div className="bg-white border-2 border-[#0284c7] rounded-[20px] p-4 shadow-[3px_3px_0px_#0369a1]">
                 <div className="flex items-center gap-2 mb-2 text-[#0c4a6e] font-black text-sm">
