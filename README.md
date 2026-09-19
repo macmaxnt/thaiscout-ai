@@ -1,64 +1,190 @@
-# 🎬 ThaiScout AI — Intelligent Location Scouting & Grounded Permit Agent
-> **AIAT x CAMT Hackathon · Track 1: Data to Solution (เปลี่ยนข้อมูลท่องเที่ยว ททท. ให้เป็นระบบที่ใช้งานได้จริง)**  
-> Autonomous Creative Location Scouting & Production Feasibility Assistant สำหรับกองถ่ายภาพยนตร์, มิวสิควิดีโอ, คอนเทนต์ครีเอเตอร์, และโปรดักชั่นเฮาส์
+# 🎬 ThaiScout AI
+### Intelligent Location Scouting & Grounded Permit Agent
+
+> **AIAT x CAMT Hackathon · Track 1: Data to Solution**  
+> Autonomous Creative Location Scouting & Production Feasibility Assistant  
+> สำหรับกองถ่ายภาพยนตร์, มิวสิควิดีโอ, คอนเทนต์ครีเอเตอร์, และโปรดักชั่นเฮาส์
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-thaiscout--ai.vercel.app-black?style=for-the-badge&logo=vercel)](https://thaiscout-ai.vercel.app)
+[![Next.js](https://img.shields.io/badge/Next.js%2015-black?style=for-the-badge&logo=next.js)](https://nextjs.org)
+[![Supabase](https://img.shields.io/badge/Supabase-3FCF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 
 ---
 
-## 🌟 ทำไมต้อง ThaiScout AI? (Pain Point & Problem Statement)
+## 🌟 ทำไมต้อง ThaiScout AI?
+
 ในโจทย์การนำชุดข้อมูลสถานที่ท่องเที่ยว ททท. 8,628 แห่งมาใช้:
-1. **ข้อจำกัดของข้อมูลดิบ:** มีเฉพาะสถานที่ท่องเที่ยว วัด และธรรมชาติ (45.5%) แต่แทบไม่มีข้อมูลคาเฟ่ ร้านอาหาร หรือโรงแรม จึงไม่เหมาะกับการทำแอปเที่ยวทั่วไป
-2. **จุดแข็งมหาศาลสำหรับกองถ่าย:** ข้อมูลมีพิกัด **GPS ครบ 100%** และมี **เบอร์ติดต่อหน่วยงานทางการถึง 89.4%** ซึ่งเป็นสินทรัพย์ล้ำค่าที่สุดสำหรับทีม Location Scout
-3. **ปัญหาของกองถ่าย:** ผู้กำกับมักมีบรีฟเป็น Mood & Tone นามธรรม (เช่น *"อยากได้น้ำตกลึกลับ โขดหินใหญ่ ถ่าย MV เพลงเศร้า"*) แต่ค้นหาใน Google Search หรือระบบทั่วไปยากมาก และเสี่ยงต่อการถูกสั่งปิดกองหากไม่รู้ระเบียบกฎหมายในพื้นที่
+
+| ปัญหา | วิธีแก้ |
+|-------|---------|
+| ข้อมูลดิบมีเฉพาะวัด/ธรรมชาติ ไม่มีคาเฟ่-ร้านอาหาร | เน้นกลุ่มเป้าหมาย **กองถ่าย** ที่ต้องการพิกัด GPS ชัด |
+| ผู้กำกับบรีฟด้วยภาษา Mood & Tone นามธรรม | ระบบ NLP แปลบรีฟ → จับคู่สถานที่จาก corpus |
+| เสี่ยงถูกสั่งปิดกองหากไม่รู้กฎระเบียบพื้นที่ | AI RAG ดึงข้อมูลจริงจาก corpus ไม่กุตัวเลข |
 
 ---
 
-## 🚀 ฟีเจอร์หลักของระบบ (Core Capabilities)
+## 🚀 ฟีเจอร์หลัก
 
-### 1. 🔍 Creative Brief Search (NLP & Mood Grounding)
-- รองรับการค้นหาด้วยบรีฟนามธรรมและภาษาพูดของผู้กำกับ
+### 🔍 Creative Brief Search
+- ค้นหาด้วยบรีฟนามธรรม เช่น *"น้ำตกลึกลับ โขดหินใหญ่ เหมาะถ่าย MV เพลงเศร้า"*
 - กรองแยกรายจังหวัด หรือค้นหาทั่วประเทศ
-- จับคู่สถานที่และคำนวณ **Match Score (%)** พร้อมแสดงจุดเด่นและคำบรรยายฉบับเต็ม
+- คำนวณ **Match Score (%)** พร้อมแสดงจุดเด่นของแต่ละสถานที่
 
-### 2. 🤖 AI RAG Production Consultant (Retrieval-Augmented Generation)
-- **Domain-Specific RAG:** ดึงข้อมูลสถานที่จริงจาก Corpus ททท. 8,628 แห่งขึ้นมาเป็น Ground Truth
-- **Cinematic & Lighting Analysis:** วิเคราะห์ทิศทางแสงธรรมชาติ (Golden Hour, God Rays), มิติภาพ และสภาพเสียงรบกวนในกอง
-- **Logistics & Gear Access:** ประเมินการเข้าถึงของรถตู้กองถ่าย รถปั่นไฟ (Inverter Power) และขนาดทีมงานที่รองรับได้
-- **Anti-Hallucination & Safe Refusal (ตาม Lab 4):** หากในฐานข้อมูล ททท. ไม่มีระบุตัวเลขค่าธรรมเนียม AI จะปฏิเสธการกุราคาเอง และชี้นำให้โทรติดต่อเบอร์ทางการจริงของพื้นที่นั้นทันที
-- **Interactive Grounded Q&A:** ซักถามข้อกังวลเฉพาะจุด เช่น ระเบียบการบินโดรน (กสทช. + CAAT), สภาพถนนลาดชัน พร้อมแปะป้าย Evidence Citation ย้อนกลับถึง Corpus ID
+### 🤖 AI RAG Production Consultant
+- ดึงข้อมูลสถานที่จาก Supabase (ททท. 8,628 แห่ง) เป็น Ground Truth
+- วิเคราะห์แสงธรรมชาติ (Golden Hour), Logistics, การเข้าถึงของรถกองถ่าย
+- **Anti-Hallucination:** ถ้าไม่มีข้อมูลในฐาน AI จะบอกให้โทรติดต่อเบอร์ทางการแทน
+- ซักถามข้อกังวลเฉพาะจุด พร้อมอ้างอิง Evidence กลับถึง Corpus ID
 
-### 3. 🗺️ Split-Screen Interactive Map & Recce Board
-- แผนที่แสดงพิกัดจริงควบคู่กับลิสต์ผลการค้นหา
-- ปักหมุดเลือกโลเคชันเข้าสู่ **Recce Board** (สำรวจหน้างาน)
-- วาดเส้นทางเชื่อมต่อจุดถ่ายทำ (Waypoint Route)
-- **Google Maps Multi-Stop Routing:** คลิกปุ่มเดียวเปิด Google Maps นำทางต่อเนื่องทุกจุดกองถ่ายได้ทันที
+### 🗺️ Split-Screen Interactive Map
+- แผนที่ Leaflet.js แสดงพิกัดจริงควบคู่กับลิสต์ผลการค้นหา
+- ปักหมุดเข้า **Recce Board** (คลังสถานที่)
+- วาดเส้นทางเชื่อมต่อจุดถ่ายทำ (Waypoint Route) พร้อมคำนวณระยะทาง
+- เปิด Google Maps Multi-Stop Routing ด้วยคลิกเดียว
 
-### 4. 🎨 Lab 4 Neo-Brutalist Theme
-- ออกแบบสไตล์ Lab 4 AI Agent (Tone-on-Tone Palette, คอนทราสต์สูง, กรอบหนาเงาคมชัด)
-- Responsive ใช้งานได้ลื่นไหลทั้ง Desktop และ Mobile
-
----
-
-## 🛠️ สถาปัตยกรรมระบบ (Architecture & Tech Stack)
-- **Frontend / Framework:** Next.js 15 (App Router), React 19, TypeScript
-- **Styling:** Tailwind CSS v4 (Neo-brutalist interactive tokens)
-- **Mapping:** Leaflet.js, OpenStreetMap Tiles, Google Maps URLs API
-- **Knowledge Base (Corpus):** Tourism Authority of Thailand (TAT) Cleaned Attractions Dataset (8,628 records)
-- **Agentic Engine:** Full-Text Grounded Search, Bounded Context Augmentation, Safe Refusal Guardrails
+### 📁 Collection / Recce Board
+- บันทึกสถานที่ที่ชอบเข้าคลัง
+- เรียงลำดับด้วย Drag & Drop
+- ดูบนแผนที่พร้อมเส้นทางในคลัง
 
 ---
 
-## 💻 วิธีการรันในเครื่อง (Local Setup)
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Framework | Next.js 15 (App Router) + React 19 + TypeScript |
+| Styling | Tailwind CSS v4 (Neo-brutalist theme) |
+| Database | **Supabase** (PostgreSQL) — 8,628 locations |
+| Map | Leaflet.js + OpenStreetMap |
+| AI Engine | Google Gemini API |
+| Place Photos | Google Places API |
+| Deployment | **Vercel** (Production) |
+
+---
+
+## 💻 วิธีรันในเครื่อง (Local Setup)
+
+### 1. Clone Repository
 
 ```bash
-# Clone the repository
 git clone https://github.com/macmaxnt/thaiscout-ai.git
 cd thaiscout-ai
-
-# Install dependencies
 npm install
+```
 
-# Run development server
+### 2. ตั้งค่า Environment Variables
+
+```bash
+cp .env.example .env.local
+```
+
+เปิดไฟล์ `.env.local` แล้วใส่ค่า API Keys (ดูรายละเอียดการขอ key ในไฟล์ [.env.example](./.env.example))
+
+```env
+GEMINI_API_KEY=your_gemini_api_key_here
+GOOGLE_PLACES_API_KEY=your_google_places_api_key_here
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
+SUPABASE_URL=https://your-project-id.supabase.co
+SUPABASE_ANON_KEY=your_supabase_anon_key_here
+```
+
+> **หมายเหตุ:** ข้อมูลสถานที่ท่องเที่ยว 8,628 แห่งอยู่บน Supabase Cloud แล้ว — ขอ Supabase credentials จากเจ้าของโปรเจกต์
+
+### 3. รัน Development Server
+
+```bash
 npm run dev
 ```
 
-เปิดเว็บเบราว์เซอร์ที่ [http://localhost:3000](http://localhost:3000)
+เปิดเบราว์เซอร์ที่ [http://localhost:3000](http://localhost:3000)
+
+---
+
+## 🗄️ Database Schema (Supabase)
+
+ตาราง `thaiscout_locations` ใน Supabase PostgreSQL:
+
+```sql
+CREATE TABLE thaiscout_locations (
+  id             TEXT PRIMARY KEY,
+  name_th        TEXT,
+  name_en        TEXT,
+  category       TEXT,
+  sub_type       TEXT,
+  region         TEXT,
+  province       TEXT,
+  district       TEXT,
+  sub_district   TEXT,
+  description    TEXT,
+  latitude       DOUBLE PRECISION,
+  longitude      DOUBLE PRECISION,
+  phone          TEXT,
+  website        TEXT,
+  open_hours     TEXT,
+  highlights     TEXT[],
+  tags           TEXT[]
+);
+```
+
+---
+
+## 📁 โครงสร้างโปรเจกต์
+
+```
+thaiscout-app/
+├── src/
+│   ├── app/
+│   │   ├── page.tsx              # หน้าหลัก (Scout Search)
+│   │   ├── collection/           # หน้าคลังสถานที่
+│   │   └── api/
+│   │       ├── scout/route.ts    # API: ค้นหาสถานที่ด้วย Gemini + Supabase
+│   │       ├── chat/route.ts     # API: AI RAG Consultant
+│   │       └── places/route.ts   # API: Google Places Photos
+│   └── utils/
+│       └── supabase.ts           # Supabase client
+├── data/                         # ข้อมูล ททท. ดิบ (chunk_0 - chunk_4.json)
+├── .env.example                  # Template สำหรับ environment variables
+└── README.md
+```
+
+---
+
+## 🌐 Production Deployment
+
+แอปดีพลอยบน Vercel:  
+🔗 **[https://thaiscout-ai.vercel.app](https://thaiscout-ai.vercel.app)**
+
+ถ้าต้องการดีพลอย Vercel ใหม่ด้วยตัวเอง:
+```bash
+npm install -g vercel
+vercel login
+vercel deploy --prod
+```
+
+แล้วตั้งค่า Environment Variables ผ่าน Vercel Dashboard ให้ครบตาม `.env.example`
+
+---
+
+## 🤝 Contributing
+
+1. Fork repository นี้
+2. สร้าง branch ใหม่: `git checkout -b feature/your-feature-name`
+3. Commit การเปลี่ยนแปลง: `git commit -m "feat: add your feature"`
+4. Push ขึ้น branch: `git push origin feature/your-feature-name`
+5. เปิด Pull Request
+
+---
+
+## 📄 License
+
+MIT License — ใช้งานและแก้ไขได้อิสระ
+
+---
+
+## 👥 ทีมพัฒนา
+
+ThaiScout AI สร้างขึ้นในงาน **AIAT x CAMT Hackathon**  
+ข้อมูล: Tourism Authority of Thailand (TAT) Open Dataset
