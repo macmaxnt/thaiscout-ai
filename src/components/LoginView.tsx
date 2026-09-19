@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { UserPlus, LogIn, ShieldCheck, ChevronRight, Sparkles } from "lucide-react";
-import { IconBolt, IconAlertTriangle } from "@tabler/icons-react";
+import { IconBoltFilled, IconBolt, IconAlertTriangle } from "@tabler/icons-react";
 import { MockUser, getMockUsers, registerMockUser, authenticateMockUser } from "@/utils/mockAuth";
 
 interface LoginViewProps {
@@ -74,7 +74,7 @@ export default function LoginView({ onLogin }: LoginViewProps) {
         {/* Brand Header */}
         <div className="text-center mb-6">
           <div className="w-12 h-12 rounded-2xl bg-[#d67940] border-2 border-white/20 flex items-center justify-center text-white shadow-[3px_3px_0px_#a8521d] font-black text-2xl mx-auto mb-3">
-            <IconBolt size={25} stroke={2.5} />
+            <IconBoltFilled size={25} stroke={2.5} />
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-[#1b3558] tracking-tight">
             Travel Location
@@ -158,7 +158,7 @@ export default function LoginView({ onLogin }: LoginViewProps) {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="•••••••• (ตัวอย่าง: password123)"
+              placeholder="••••••••"
               className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#285185] focus:ring-2 focus:ring-[#285185]/15"
             />
           </div>

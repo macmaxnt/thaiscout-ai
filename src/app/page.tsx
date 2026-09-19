@@ -25,6 +25,7 @@ import { MockUser, getCurrentSession, setCurrentSession } from "@/utils/mockAuth
 import RegionIcon from "@/components/RegionIcon";
 import {
   IconBolt,
+  IconBoltFilled,
   IconFolder,
   IconShieldCheck,
   IconSparkles,
@@ -579,7 +580,7 @@ export default function Home() {
                 className="w-9 h-9 rounded-xl bg-[#d67940] flex items-center justify-center text-white font-black text-lg shadow-sm border border-white/20 cursor-pointer hover:scale-105 transition"
                 title="Travel Location"
               >
-                <IconBolt size={21} stroke={2.5} />
+                <IconBoltFilled size={21} stroke={2.5} />
               </button>
               {isSidebarOpen && (
                 <div>
@@ -631,7 +632,7 @@ export default function Home() {
                 title="ค้นหาและค้นพบ"
               >
                 <div className="flex items-center gap-2.5">
-                  <Search className="w-4 h-4 text-[#d67940] shrink-0" />
+                  <Search className="w-4 h-4 text-[#d67940] fill-[#d67940] shrink-0" />
                   {isSidebarOpen && <span>ค้นหาและค้นพบ</span>}
                 </div>
                 {isSidebarOpen && (
@@ -664,7 +665,7 @@ export default function Home() {
                 title="ปักหมุดที่สนใจ"
               >
                 <div className="flex items-center gap-2.5">
-                  <Bookmark className="w-4 h-4 text-[#d67940] shrink-0" />
+                  <Bookmark className="w-4 h-4 text-[#d67940] fill-[#d67940] shrink-0" />
                   {isSidebarOpen && <span>ปักหมุดที่สนใจ</span>}
                 </div>
                 {isSidebarOpen && (
@@ -1048,70 +1049,53 @@ export default function Home() {
 
               {/* Level 2 Filter: Break down provinces under selected region (แตกจังหวัดออกมาของภาคนั้น) */}
               {selectedRegion !== "ทั้งหมด" && (
-                <div className="pt-2 border-t border-slate-100 bg-[#f0f5f8] p-3 rounded-xl border border-[#ccd9e2]">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[11px] font-black text-[#1b3558] flex items-center gap-1">
+                <div className="pt-2.5 border-t border-slate-100 bg-[#f0f5f8] p-3 rounded-xl border border-[#ccd9e2]">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <label htmlFor="province-filter" className="text-[11px] font-black text-[#1b3558] flex items-center gap-1">
                       <MapPin className="w-3.5 h-3.5 text-[#d67940]" />
                       จังหวัดใน{selectedRegion}:
-                    </span>
+                    </label>
                     {selectedProvince !== "all" && (
                       <button
+                        type="button"
                         onClick={() => {
                           setSelectedProvince("all");
                           if (!filterOnlyPinned && activeTab !== "scout") {
                             handleSearch(brief, selectedRegion, "all");
                           }
                         }}
-                        className="text-xs text-[#d67940] hover:underline font-bold cursor-pointer"
+                        className="self-start sm:self-auto text-[10px] text-[#d67940] hover:underline font-bold cursor-pointer"
                       >
-                        ดูทุกจังหวัดในภาคนี้
+                        ล้างจังหวัด
                       </button>
                     )}
                   </div>
 
-                  <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pr-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedProvince("all");
+                  <div className="relative mt-2">
+                    <select
+                      id="province-filter"
+                      value={selectedProvince}
+                      onChange={(event) => {
+                        const nextProvince = event.target.value;
+                        setSelectedProvince(nextProvince);
                         if (!filterOnlyPinned && activeTab !== "scout") {
-                          handleSearch(brief, selectedRegion, "all");
+                          handleSearch(brief, selectedRegion, nextProvince);
                         }
                       }}
-                      className={`px-2.5 py-0.5 rounded-md text-[11px] font-bold border transition cursor-pointer ${
-                        selectedProvince === "all"
-                          ? "bg-[#d67940] text-white border-[#d67940]"
-                          : "bg-white text-slate-700 border-slate-200 hover:border-[#d67940]"
-                      }`}
+                      className="w-full appearance-none rounded-lg border border-[#b9cede] bg-white px-3 py-2 pr-9 text-xs font-bold text-[#1b3558] shadow-sm outline-none transition focus:border-[#285185] focus:ring-2 focus:ring-[#285185]/15"
+                      aria-label={`เลือกจังหวัดใน${selectedRegion}`}
                     >
-                      ทั้งหมดในภาค
-                    </button>
-
-                    {(filterOnlyPinned || activeTab === "scout" 
-                      ? pinnedProvincesInSelectedRegion 
-                      : provincesInSelectedRegion.map((p) => p.name)
-                    ).map((provName) => {
-                      const isProvActive = selectedProvince === provName;
-                      return (
-                        <button
-                          key={provName}
-                          type="button"
-                          onClick={() => {
-                            setSelectedProvince(provName);
-                            if (!filterOnlyPinned && activeTab !== "scout") {
-                              handleSearch(brief, selectedRegion, provName);
-                            }
-                          }}
-                          className={`px-2.5 py-0.5 rounded-md text-[11px] font-bold border transition cursor-pointer ${
-                            isProvActive
-                              ? "bg-[#d67940] text-white border-[#d67940]"
-                              : "bg-white text-slate-700 border-slate-200 hover:border-[#d67940]"
-                          }`}
-                        >
+                      <option value="all">ทุกจังหวัดใน{selectedRegion}</option>
+                      {(filterOnlyPinned || activeTab === "scout"
+                        ? pinnedProvincesInSelectedRegion
+                        : provincesInSelectedRegion.map((p) => p.name)
+                      ).map((provName) => (
+                        <option key={provName} value={provName}>
                           {provName}
-                        </button>
-                      );
-                    })}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#285185]" />
                   </div>
                 </div>
               )}
@@ -1287,7 +1271,18 @@ export default function Home() {
             ) : (
               <>
                 <div ref={cardsTopRef} className="scroll-mt-4" />
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-3.5 items-start">
+                {(filterOnlyPinned || activeTab === "scout" || activeCollectionId) && (
+                  <div className="flex items-center justify-between gap-3 rounded-xl border border-[#b9cede] bg-[#f0f5f8] px-3 py-2.5 text-[11px]">
+                    <div className="flex items-center gap-2 text-[#1b3558]">
+                      <GripVertical className="w-4 h-4 text-[#d67940]" />
+                      <span><strong>จัดลำดับสถานที่</strong> · ลากจากจุดจับ หรือใช้ปุ่มเลื่อนขึ้นลง</span>
+                    </div>
+                    <span className="hidden sm:inline-flex rounded-full bg-white px-2 py-1 font-black text-[#285185] border border-[#ccd9e2]">
+                      {displayedLocations.length} รายการ
+                    </span>
+                  </div>
+                )}
+                <div className={`grid ${filterOnlyPinned || activeTab === "scout" ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2 xl:grid-cols-2"} gap-3.5 items-start`}>
                   {displayedLocations.map((loc, cardIdx) => {
                     const isSaved = scoutingList.some((x) => x.id === loc.id);
                     const isSelected = selectedLocation?.id === loc.id;
@@ -1307,9 +1302,23 @@ export default function Home() {
 
                     const handleCardMove = (fromIdx: number, toIdx: number) => {
                       if (toIdx < 0 || toIdx >= displayedLocations.length) return;
-                      const updated = [...displayedLocations];
-                      const [moved] = updated.splice(fromIdx, 1);
-                      updated.splice(toIdx, 0, moved);
+                      const fromId = displayedLocations[fromIdx]?.id;
+                      const toId = displayedLocations[toIdx]?.id;
+                      const sourceLocations = activeCollectionId
+                        ? collections.find((collection) => collection.id === activeCollectionId)?.locations || []
+                        : scoutingList;
+                      const visibleIds = new Set(displayedLocations.map((item) => item.id));
+                      const visibleLocations = sourceLocations.filter((item) => visibleIds.has(item.id));
+                      const sourceFromIndex = visibleLocations.findIndex((item) => item.id === fromId);
+                      const sourceToIndex = visibleLocations.findIndex((item) => item.id === toId);
+                      if (sourceFromIndex === -1 || sourceToIndex === -1) return;
+                      const [moved] = visibleLocations.splice(sourceFromIndex, 1);
+                      visibleLocations.splice(sourceToIndex, 0, moved);
+                      let visibleIndex = 0;
+                      const updated = sourceLocations.map((item) => {
+                        if (!visibleIds.has(item.id)) return item;
+                        return visibleLocations[visibleIndex++];
+                      });
 
                       if (activeCollectionId) {
                         handleReorderCollectionLocations(activeCollectionId, updated);
@@ -1324,7 +1333,9 @@ export default function Home() {
                         role="button"
                         tabIndex={0}
                         aria-current={isSelected ? "true" : undefined}
-                        aria-label={`ดูรายละเอียด ${loc.name_th} และแสดงตำแหน่งบนแผนที่`}
+                        aria-label={`${canReorder ? `ลำดับที่ ${recceIndex !== -1 ? recceIndex + 1 : cardIdx + 1} ` : ""}ดูรายละเอียด ${loc.name_th} และแสดงตำแหน่งบนแผนที่`}
+                        aria-roledescription={canReorder ? "ลากเพื่อจัดลำดับสถานที่" : undefined}
+                        aria-grabbed={isCardBeingDragged}
                         draggable={canReorder}
                         onDragStart={(e) => {
                           if (!canReorder) return;
@@ -1366,11 +1377,11 @@ export default function Home() {
                             handleSelectFromCard(loc);
                           }
                         }}
-                        className={`self-start h-fit rounded-2xl p-4 transition-all duration-150 cursor-pointer flex flex-col justify-between border ${
+                        className={`self-start h-fit rounded-2xl p-4 transition-all duration-150 ${canReorder ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"} flex flex-col justify-between border ${
                           isCardBeingDragged
                             ? "opacity-40 border-dashed border-[#d67940] scale-[0.98]"
                             : isCardTargetOver
-                            ? "border-[#d67940] bg-[#fff7ed] shadow-lg -translate-y-1"
+                            ? "border-[#d67940] bg-[#fff7ed] shadow-lg ring-2 ring-[#d67940]/25 -translate-y-1"
                             : isSelected
                             ? "border-[#d67940] shadow-[3px_3px_0px_#a8521d] ring-4 ring-[#d67940]/20 scale-[1.01] bg-[#fffdf9]"
                             : isInAnyCollection && !activeCollectionId
@@ -1392,9 +1403,10 @@ export default function Home() {
                                 <div className="flex items-center gap-0.5 shrink-0">
                                   <div
                                     className="cursor-grab active:cursor-grabbing p-1 text-slate-400 hover:text-[#285185] rounded"
-                                    title="ลากเพื่อสลับเรียงลำดับการ์ด"
+                                    title="ลากจากจุดนี้เพื่อจัดลำดับสถานที่"
+                                    aria-label={`ลากเพื่อจัดลำดับ ${loc.name_th}`}
                                   >
-                                    <GripVertical className="w-4 h-4" />
+                                    <GripVertical className="w-5 h-5" />
                                   </div>
                                   <div className="flex flex-col -space-y-1">
                                     <button
@@ -1425,9 +1437,9 @@ export default function Home() {
                                 </div>
                               )}
 
-                              {activeCollectionId && (
-                                <span className="w-5 h-5 rounded-md bg-[#285185] text-white font-mono font-bold text-[11px] flex items-center justify-center shrink-0 shadow-2xs">
-                                  #{cardIdx + 1}
+                              {(activeCollectionId || filterOnlyPinned || activeTab === "scout") && (
+                                <span className="w-7 h-7 rounded-lg bg-[#285185] text-white font-mono font-black text-xs flex items-center justify-center shrink-0 shadow-sm" title={`ลำดับที่ ${recceIndex !== -1 ? recceIndex + 1 : cardIdx + 1}`}>
+                                  {recceIndex !== -1 ? recceIndex + 1 : cardIdx + 1}
                                 </span>
                               )}
 
@@ -1466,11 +1478,6 @@ export default function Home() {
                               {/* Only show Pin button when not viewing a specific collection */}
                               {!activeCollectionId && (
                                 <div className="flex items-center gap-1 shrink-0">
-                                  {recceIndex !== -1 && (
-                                    <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                      #{recceIndex + 1}
-                                    </span>
-                                  )}
                                   <button
                                     type="button"
                                     aria-label={isSaved ? `ถอนหมุด ${loc.name_th}` : `ปักหมุด ${loc.name_th}`}

@@ -158,7 +158,7 @@ export default function RagModal({
                 type="button"
                 onClick={() => onToggleScout(location)}
                 aria-label={isPinned ? "ปลดหมุดสถานที่นี้" : "ปักหมุดสถานที่นี้"}
-                className={`px-3 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 transition cursor-pointer border ${
+                className={`min-h-10 px-3.5 rounded-lg text-xs font-black flex items-center gap-1.5 transition cursor-pointer border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d67940]/40 focus-visible:ring-offset-2 ${
                   isPinned
                     ? "bg-[#fff7ed] border-[#f1c39f] text-[#a8521d] hover:bg-[#ffeddc]"
                     : "bg-[#d67940] text-white border-[#d67940] hover:bg-[#c06530]"
@@ -175,7 +175,7 @@ export default function RagModal({
               type="button"
               onClick={onClose}
               aria-label="ปิดหน้าต่าง AI RAG Production Consultant"
-              className="p-2 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-[#1b3558] border border-slate-200 transition cursor-pointer"
+              className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-[#1b3558] border border-slate-200 transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#285185]/30 focus-visible:ring-offset-2"
             >
               <X className="w-5 h-5" />
             </button>
@@ -205,7 +205,7 @@ export default function RagModal({
               <button
                 type="button"
                 onClick={fetchDossier}
-                className="mt-4 px-4 py-2 rounded-xl bg-[#285185] text-white text-xs font-black hover:bg-[#1b3558] transition cursor-pointer"
+                className="mt-4 min-h-10 px-4 rounded-lg bg-[#285185] text-white text-xs font-black hover:bg-[#1b3558] transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#285185]/30 focus-visible:ring-offset-2"
               >
                 ลองใหม่อีกครั้ง
               </button>
@@ -363,7 +363,7 @@ export default function RagModal({
                       type="button"
                       onClick={() => handleAsk(q)}
                       disabled={qaLoading}
-                      className="text-[11px] px-2.5 py-1.5 rounded-lg bg-white hover:bg-[#eaf2f7] text-[#1b3558] border border-[#cbd9e4] font-bold transition cursor-pointer text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="min-h-9 text-[11px] px-2.5 rounded-lg bg-white hover:bg-[#eaf2f7] hover:border-[#285185]/40 text-[#1b3558] border border-[#cbd9e4] font-bold transition cursor-pointer text-left disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#285185]/30 focus-visible:ring-offset-1"
                     >
                       <span className="inline-flex items-center gap-1.5">
                         {idx === 0 ? <IconDrone size={14} /> : idx === 1 ? <Truck className="w-3.5 h-3.5" /> : <IconBuildingSkyscraper size={14} />}
@@ -382,13 +382,13 @@ export default function RagModal({
                     onChange={(e) => setQuestion(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleAsk()}
                     placeholder="เช่น ทางเดินแคบไหม? มีห้องน้ำสำหรับนักแสดงไหม?..."
-                    className="flex-1 min-w-0 bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#285185]/20 focus:border-[#285185]"
+                    className="flex-1 min-w-0 bg-white border border-slate-300 rounded-lg px-3 py-2.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#285185]/20 focus:border-[#285185]"
                   />
                   <button
                     type="button"
                     onClick={() => handleAsk()}
                     disabled={qaLoading || !question.trim()}
-                    className="text-xs px-4 py-2.5 rounded-xl font-black bg-[#285185] hover:bg-[#1b3558] disabled:bg-slate-300 disabled:cursor-not-allowed text-white flex items-center justify-center gap-1.5 transition cursor-pointer shrink-0 sm:min-w-[112px]"
+                    className="min-h-10 text-xs px-4 rounded-lg font-black bg-[#285185] hover:bg-[#1b3558] disabled:bg-slate-300 disabled:cursor-not-allowed text-white flex items-center justify-center gap-1.5 transition cursor-pointer shrink-0 sm:min-w-[112px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#285185]/30 focus-visible:ring-offset-2"
                   >
                     <Send className="w-3.5 h-3.5" />
                     {qaLoading ? "กำลังวิเคราะห์..." : "ถาม AI"}
@@ -433,7 +433,7 @@ export default function RagModal({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl font-bold bg-[#285185] hover:bg-[#1b3558] text-white transition cursor-pointer shrink-0"
+            className="min-h-10 px-4 rounded-lg font-bold bg-white hover:bg-[#eaf2f7] border border-[#b9cede] text-[#285185] transition cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#285185]/30 focus-visible:ring-offset-2"
           >
             ปิดหน้าต่าง
           </button>
