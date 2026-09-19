@@ -1,0 +1,1 @@
+# ThaiScout AI
