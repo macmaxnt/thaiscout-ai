@@ -6,6 +6,7 @@ import {
   Phone, Zap, Truck, DollarSign, Trash2, ArrowRight, ShieldCheck, 
   Camera, Eye, Layers, AlertCircle
 } from "lucide-react";
+import ProvinceSelector from "@/components/ProvinceSelector";
 
 interface HostPortalProps {
   customLocations: any[];
@@ -266,20 +267,12 @@ export default function HostPortal({
                 <label className="block text-xs font-black text-slate-800 mb-1">
                   จังหวัด <span className="text-rose-600">*</span>
                 </label>
-                <select
+                <ProvinceSelector
                   value={province}
-                  onChange={(e) => setProvince(e.target.value)}
-                  className="w-full bg-white border-2 border-slate-300 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:border-[#0284c7]"
-                >
-                  <option value="เชียงใหม่">เชียงใหม่</option>
-                  <option value="กรุงเทพมหานคร">กรุงเทพมหานคร</option>
-                  <option value="พระนครศรีอยุธยา">พระนครศรีอยุธยา</option>
-                  <option value="สมุทรปราการ">สมุทรปราการ</option>
-                  <option value="ภูเก็ต">ภูเก็ต</option>
-                  <option value="กาญจนบุรี">กาญจนบุรี</option>
-                  <option value="จันทบุรี">จันทบุรี</option>
-                  <option value="น่าน">น่าน</option>
-                </select>
+                  onChange={setProvince}
+                  allowAll={false}
+                  placeholder="เลือกจังหวัดที่ตั้ง..."
+                />
               </div>
 
               <div>

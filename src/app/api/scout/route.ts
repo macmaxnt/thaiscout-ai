@@ -19,24 +19,41 @@ function loadData() {
   return cachedAttractions;
 }
 
+import { detectProvinceFromText, THAI_PROVINCES } from "@/data/provinces";
+
 export async function POST(req: Request) {
   try {
     const { brief, province, category } = await req.json();
     const data = loadData();
 
     const briefLower = (brief || "").toLowerCase().trim();
+    
+    // Smart province detection from brief if province is not explicitly set or is "all"
+    const detected = detectProvinceFromText(briefLower);
+    const effectiveProvince =
+      province && province !== "all"
+        ? (detectProvinceFromText(province).detectedProvince || province)
+        : null;
+
     const queryTokens = briefLower.split(/\s+/).filter((t: string) => t.length > 1);
 
     const scored = data.map((item) => {
       let score = 0;
 
-      if (province && province !== "all") {
-        if (!item.province.includes(province)) {
+      // 1. Explicit Province Filter
+      if (effectiveProvince) {
+        if (!item.province.includes(effectiveProvince)) {
           return { item, score: -100 };
         }
-        score += 20;
+        score += 30;
+      } else if (detected.detectedProvince) {
+        // If province wasn't hard-filtered, but user typed province in the brief
+        if (item.province.includes(detected.detectedProvince)) {
+          score += 50; // Big boost for matching detected province
+        }
       }
 
+      // 2. Category Filter
       if (category && category !== "all") {
         if (!item.category.includes(category)) {
           return { item, score: -100 };
@@ -44,13 +61,19 @@ export async function POST(req: Request) {
         score += 15;
       }
 
+      // 3. Keyword Scoring
       for (const token of queryTokens) {
-        if (item.name_th.toLowerCase().includes(token)) score += 25;
+        if (item.name_th.toLowerCase().includes(token)) score += 30;
         if (item.hilight.toLowerCase().includes(token)) score += 20;
         if (item.sub_type.toLowerCase().includes(token)) score += 15;
         if (item.detail.toLowerCase().includes(token)) score += 10;
         if (item.category.toLowerCase().includes(token)) score += 8;
-        if (item.province.toLowerCase().includes(token)) score += 10;
+        if (item.province.toLowerCase().includes(token)) score += 25;
+      }
+
+      // 4. Boost for famous landmarks or district matches
+      if (detected.matchedAlias && (item.name_th.includes(detected.matchedAlias) || item.detail.includes(detected.matchedAlias))) {
+        score += 25;
       }
 
       if (item.lat && item.lng) score += 3;

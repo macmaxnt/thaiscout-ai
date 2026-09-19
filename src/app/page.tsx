@@ -10,6 +10,8 @@ import {
 
 import RagModal from "@/components/RagModal";
 import HostPortal from "@/components/HostPortal";
+import ProvinceSelector from "@/components/ProvinceSelector";
+import { detectProvinceFromText } from "@/data/provinces";
 
 // Dynamic import for Leaflet map (client-only)
 const InteractiveMap = dynamic(() => import("@/components/InteractiveMap"), {
@@ -25,7 +27,7 @@ const InteractiveMap = dynamic(() => import("@/components/InteractiveMap"), {
 
 export default function Home() {
   const [brief, setBrief] = useState("น้ำตก ลำธาร โขดหิน บรรยากาศลึกลับ ถ่าย MV เพลงเศร้า");
-  const [province, setProvince] = useState("เชียงใหม่");
+  const [province, setProvince] = useState("all");
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<any[]>([]);
   const [scoutingList, setScoutingList] = useState<any[]>([]);
@@ -97,19 +99,30 @@ export default function Home() {
   };
 
   const sampleBriefs = [
+    { title: "🌊 ทะเล & ผาหิน", text: "หาดทรายขาว หน้าผาหิน จุดชมวิวพระอาทิตย์ตก", prov: "ภูเก็ต" },
     { title: "🎬 MV น้ำตกลึกลับ", text: "น้ำตก ลำธาร โขดหิน บรรยากาศลึกลับ ถ่าย MV เพลงเศร้า", prov: "เชียงใหม่" },
     { title: "🏛️ ซีนพีเรียดโบราณ", text: "วัดเก่า โบราณสถาน สถาปัตยกรรมไม้โบราณ บรรยากาศสงบ", prov: "พระนครศรีอยุธยา" },
-    { title: "🌊 ชายหาดหน้าผาหิน", text: "หาดทรายขาว หน้าผาหิน จุดชมวิวพระอาทิตย์ตก", prov: "ภูเก็ต" },
-    { title: "🌾 ชุมชนริมน้ำเก่าแก่", text: "ชุมชนริมน้ำ ตึกแถวเก่า บ้านเรือนชิโน-โปรตุกีส", prov: "จันทบุรี" },
+    { title: "🌾 ทุ่งกว้าง & คาวบอย", text: "ทุ่งหญ้า ภูเขา อ่างเก็บน้ำ บรรยากาศแคมป์ปิ้งคาวบอย", prov: "นครราชสีมา" },
+    { title: "🏙️ ดาดฟ้าแสงสีตึกสูง", text: "ตึกสูง โมเดิร์น แสงไฟนีออน วิวเมืองหลวงยามค่ำคืน", prov: "กรุงเทพมหานคร" },
+    { title: "🌊 ริมโขงสโลว์ไลฟ์", text: "ถนนคนเดินริมแม่น้ำโขง บ้านไม้โบราณ หมอกยามเช้า", prov: "เลย" },
   ];
 
   const handleSearch = async (targetBrief = brief, targetProv = province) => {
     setLoading(true);
+    // Auto-detect province if brief contains province name/alias
+    let provToSend = targetProv;
+    if (targetProv === "all") {
+      const detected = detectProvinceFromText(targetBrief);
+      if (detected.detectedProvince) {
+        provToSend = detected.detectedProvince;
+      }
+    }
+
     try {
       const res = await fetch("/api/scout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ brief: targetBrief, province: targetProv }),
+        body: JSON.stringify({ brief: targetBrief, province: provToSend }),
       });
       const data = await res.json();
       if (data.success) {
@@ -144,13 +157,10 @@ export default function Home() {
   const matchingCustom = customLocations.filter((loc) => {
     if (province !== "all" && loc.province !== province) return false;
     if (brief.trim().length > 1) {
-      const q = brief.toLowerCase();
-      const match =
-        loc.name_th.toLowerCase().includes(q) ||
-        loc.category.toLowerCase().includes(q) ||
-        loc.hilight?.toLowerCase().includes(q) ||
-        loc.detail?.toLowerCase().includes(q);
-      return match;
+      const tokens = brief.toLowerCase().split(/\s+/).filter((t: string) => t.length > 1);
+      if (tokens.length === 0) return true;
+      const fullText = `${loc.name_th} ${loc.category} ${loc.hilight || ""} ${loc.detail || ""} ${loc.province} ${loc.district || ""}`.toLowerCase();
+      return tokens.some((t: string) => fullText.includes(t));
     }
     return true;
   });
@@ -289,21 +299,14 @@ export default function Home() {
 
               <div className="flex flex-col sm:flex-row gap-2.5 items-center justify-between mt-2.5">
                 <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <MapPin className="w-4 h-4 text-[#0284c7] shrink-0" />
-                  <select
+                  <ProvinceSelector
                     value={province}
-                    onChange={(e) => setProvince(e.target.value)}
-                    className="bg-white border-2 border-slate-300 rounded-xl px-3 py-1.5 text-xs text-slate-800 font-bold focus:outline-none focus:border-[#0284c7]"
-                  >
-                    <option value="all">ทั่วประเทศ (ทุกจังหวัด)</option>
-                    <option value="เชียงใหม่">เชียงใหม่</option>
-                    <option value="กรุงเทพมหานคร">กรุงเทพมหานคร</option>
-                    <option value="ภูเก็ต">ภูเก็ต</option>
-                    <option value="พระนครศรีอยุธยา">พระนครศรีอยุธยา</option>
-                    <option value="จันทบุรี">จันทบุรี</option>
-                    <option value="กาญจนบุรี">กาญจนบุรี</option>
-                    <option value="น่าน">น่าน</option>
-                  </select>
+                    onChange={(newProv) => {
+                      setProvince(newProv);
+                      handleSearch(brief, newProv);
+                    }}
+                    allowAll={true}
+                  />
                 </div>
 
                 <button
