@@ -22,6 +22,7 @@ interface InteractiveMapProps {
   selectedLocation: MapLocation | null;
   scoutingList: MapLocation[];
   onSelectLocation: (loc: MapLocation) => void;
+  onDeselect?: () => void;
   onToggleScout: (loc: MapLocation) => void;
   onClearScout?: () => void;
   filterOnlyPinned?: boolean;
@@ -54,6 +55,7 @@ export default function InteractiveMap({
   selectedLocation,
   scoutingList,
   onSelectLocation,
+  onDeselect,
   onToggleScout,
   onClearScout,
   filterOnlyPinned = false,
@@ -63,6 +65,11 @@ export default function InteractiveMap({
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const routePolylineRef = useRef<L.Polyline | null>(null);
+
+  const onDeselectRef = useRef(onDeselect);
+  useEffect(() => {
+    onDeselectRef.current = onDeselect;
+  });
 
   useEffect(() => {
     if (!mapContainerRef.current) return;
@@ -82,6 +89,26 @@ export default function InteractiveMap({
 
     markersLayerRef.current = L.layerGroup().addTo(map);
     mapInstanceRef.current = map;
+
+    // Deselect when clicking on empty map space (not on a marker or popup)
+    map.on("click", (e) => {
+      const target = e.originalEvent?.target as HTMLElement | null;
+      if (target && (target.closest(".custom-teardrop-pin") || target.closest(".leaflet-popup"))) {
+        return;
+      }
+      onDeselectRef.current?.();
+    });
+
+    // Deselect when popup is closed (e.g. clicking the "x" close button or pressing Esc)
+    map.on("popupclose", () => {
+      setTimeout(() => {
+        if (!mapInstanceRef.current) return;
+        const hasOpenPopup = !!mapInstanceRef.current.getContainer().querySelector(".leaflet-popup");
+        if (!hasOpenPopup) {
+          onDeselectRef.current?.();
+        }
+      }, 60);
+    });
 
     return () => {
       map.remove();
@@ -218,7 +245,10 @@ export default function InteractiveMap({
         duration: 0.8,
       });
     } else if (bounds.length > 0) {
+      map.closePopup();
       map.fitBounds(bounds, { padding: [40, 40], maxZoom: 13 });
+    } else {
+      map.closePopup();
     }
   }, [locations, selectedLocation, scoutingList, filterOnlyPinned]);
 
@@ -330,12 +360,23 @@ export default function InteractiveMap({
               {selectedLocation.name_th} ({selectedLocation.province})
             </span>
           </div>
-          <button
-            onClick={() => onToggleScout(selectedLocation)}
-            className="btn btn-mint text-[11px] px-2.5 py-0.5 rounded-lg font-black shrink-0"
-          >
-            {scoutingList.some((x) => x.id === selectedLocation.id) ? "✓ ปักแล้ว" : "+ ปักหมุด"}
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => onToggleScout(selectedLocation)}
+              className="btn btn-mint text-[11px] px-2.5 py-0.5 rounded-lg font-black shrink-0"
+            >
+              {scoutingList.some((x) => x.id === selectedLocation.id) ? "✓ ปักแล้ว" : "+ ปักหมุด"}
+            </button>
+            {onDeselect && (
+              <button
+                onClick={onDeselect}
+                className="w-5 h-5 rounded-full bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-700 flex items-center justify-center text-xs font-black transition cursor-pointer"
+                title="ยกเลิกการเลือก (Deselect)"
+              >
+                ✕
+              </button>
+            )}
+          </div>
         </div>
       )}
 

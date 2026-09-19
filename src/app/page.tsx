@@ -173,9 +173,18 @@ export default function Home() {
     setFilterOnlyPinned(false);
   };
 
-  // Card click on the side: only highlights and centers on map, does NOT reorder list
+  const handleDeselect = () => {
+    setSelectedLocation(null);
+    setMapPinSelectedId(null);
+  };
+
+  // Card click on the side: toggle selection (if clicking the already selected card, deselect it)
   const handleSelectFromCard = (loc: any) => {
-    setSelectedLocation(loc);
+    if (selectedLocation?.id === loc.id) {
+      handleDeselect();
+    } else {
+      setSelectedLocation(loc);
+    }
   };
 
   // Map pin click: highlights and floats that location to index 0
@@ -763,6 +772,7 @@ export default function Home() {
             selectedLocation={selectedLocation}
             scoutingList={scoutingList}
             onSelectLocation={handleSelectFromMap}
+            onDeselect={handleDeselect}
             onToggleScout={toggleScout}
             onClearScout={handleClearScout}
             filterOnlyPinned={filterOnlyPinned}
