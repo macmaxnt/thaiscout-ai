@@ -318,15 +318,71 @@ export default function Home() {
               </div>
 
               {scoutingList.length > 0 && (
-                <button
-                  onClick={() => alert("ลิงก์สรุปข้อมูลสำหรับแชร์ทีมงานถูกสร้างเรียบร้อยแล้ว!")}
-                  className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black text-xs font-semibold rounded-xl flex items-center gap-1.5 transition"
-                >
-                  <Share2 className="w-3.5 h-3.5" />
-                  แชร์ให้ทีมงาน
-                </button>
+                <div className="flex items-center gap-2">
+                  {/* Google Maps Multi-Stop Directions URL */}
+                  {(() => {
+                    const validLocs = scoutingList.filter((x) => x.lat && x.lng);
+                    if (validLocs.length > 0) {
+                      const origin = `${validLocs[0].lat},${validLocs[0].lng}`;
+                      const destination = `${validLocs[validLocs.length - 1].lat},${validLocs[validLocs.length - 1].lng}`;
+                      const waypoints = validLocs
+                        .slice(1, -1)
+                        .map((x) => `${x.lat},${x.lng}`)
+                        .join("|");
+                      const routeUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${
+                        waypoints ? `&waypoints=${waypoints}` : ""
+                      }&travelmode=driving`;
+
+                      return (
+                        <a
+                          href={routeUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-black text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-lg shadow-emerald-500/20 transition"
+                        >
+                          <Navigation className="w-4 h-4 text-black" />
+                          เปิดเส้นทางนำทาง Google Maps ({validLocs.length} จุด)
+                        </a>
+                      );
+                    }
+                    return null;
+                  })()}
+
+                  <button
+                    onClick={() => alert("สร้างลิงก์สำหรับแชร์ให้ทีมงานกองถ่ายเรียบร้อยแล้ว!")}
+                    className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black text-xs font-semibold rounded-xl flex items-center gap-1.5 transition"
+                  >
+                    <Share2 className="w-3.5 h-3.5" />
+                    แชร์ให้ทีมงาน
+                  </button>
+                </div>
               )}
             </div>
+
+            {/* Embedded Interactive Google Map Preview */}
+            {scoutingList.filter((x) => x.lat && x.lng).length > 0 && (
+              <div className="mb-6 rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 p-1 shadow-2xl">
+                <div className="bg-slate-900/90 px-4 py-2.5 flex items-center justify-between border-b border-slate-800 text-xs">
+                  <span className="font-semibold text-slate-200 flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-emerald-400" />
+                    พรีวิวแผนที่เส้นทางออกกองสำรวจ (Recce Route Map)
+                  </span>
+                  <span className="text-[11px] text-slate-400">
+                    จุดเริ่มต้น: {scoutingList[0]?.name_th}
+                  </span>
+                </div>
+                <iframe
+                  title="Google Maps Route"
+                  width="100%"
+                  height="340"
+                  style={{ border: 0 }}
+                  loading="lazy"
+                  allowFullScreen
+                  src={`https://maps.google.com/maps?q=${scoutingList.filter((x) => x.lat && x.lng).map((x) => `${x.lat},${x.lng}`).join("&q=")}&hl=th&z=11&output=embed`}
+                  className="rounded-xl opacity-90 hover:opacity-100 transition"
+                />
+              </div>
+            )}
 
             {scoutingList.length === 0 ? (
               <div className="text-center py-16 bg-slate-900/40 rounded-2xl border border-slate-800">
