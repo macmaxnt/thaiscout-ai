@@ -345,10 +345,6 @@ export default function Home() {
                   Bounded AI Agent · FTS Grounding
                 </span>
               </div>
-
-              <div className="text-[11px] font-black text-[#0284c7] bg-[#f0f9ff] px-2.5 py-0.5 rounded-full border border-[#bae6fd]">
-                Zero-Hallucination Verified
-              </div>
             </div>
 
             <div>
