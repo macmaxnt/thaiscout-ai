@@ -11,6 +11,9 @@ import {
   getDistrictsByProvince, 
   validateDistrict 
 } from "@/utils/districtValidation";
+import provinceCentersRaw from "@/data/provinceCenters.json";
+
+const provinceCenters = provinceCentersRaw as Record<string, { lat: number; lng: number }>;
 
 interface HostPortalProps {
   customLocations: any[];
@@ -33,6 +36,8 @@ export default function HostPortal({
   const [category, setCategory] = useState("บ้าน & เรือนไทย");
   const [lat, setLat] = useState("");
   const [lng, setLng] = useState("");
+  const [gpsTouched, setGpsTouched] = useState(false);
+  const [gpsError, setGpsError] = useState<string | null>(null);
   const [rate, setRate] = useState("15,000");
   const [power, setPower] = useState("มีไฟ 3 เฟส และลานจอดสำหรับรถปั่นไฟ");
   const [parking, setParking] = useState("จอดรถตู้ได้ 6 คัน + รถบรรทุกอุปกรณ์ 2 คัน");
@@ -53,6 +58,42 @@ export default function HostPortal({
   const districtValidation = useMemo(() => {
     return validateDistrict(district, province);
   }, [district, province]);
+
+  // GPS real-time validation
+  const parsedLat = parseFloat(lat);
+  const parsedLng = parseFloat(lng);
+  const isLatValid = !isNaN(parsedLat) && parsedLat >= 5.5 && parsedLat <= 20.6;
+  const isLngValid = !isNaN(parsedLng) && parsedLng >= 97.0 && parsedLng <= 106.0;
+  const isGpsValid = isLatValid && isLngValid;
+
+  const handleAutoFillGps = () => {
+    if (!province) return;
+    const center = provinceCenters[province];
+    if (center) {
+      setLat(center.lat.toString());
+      setLng(center.lng.toString());
+      setGpsError(null);
+      setGpsTouched(true);
+    }
+  };
+
+  const handleGetCurrentLocation = () => {
+    if (typeof window === "undefined" || !navigator.geolocation) {
+      setGpsError("เบราว์เซอร์ไม่รองรับการเข้าถึงตำแหน่ง GPS");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLat(pos.coords.latitude.toFixed(4));
+        setLng(pos.coords.longitude.toFixed(4));
+        setGpsError(null);
+        setGpsTouched(true);
+      },
+      () => {
+        setGpsError("ไม่สามารถดึงตำแหน่งปัจจุบันได้ กรุณาอนุญาตการเข้าถึง Location");
+      }
+    );
+  };
 
   const handleProvinceChange = (newProv: string) => {
     setProvince(newProv);
@@ -129,6 +170,8 @@ export default function HostPortal({
     setCategory(p.cat);
     setLat(p.lat);
     setLng(p.lng);
+    setGpsError(null);
+    setGpsTouched(false);
     setRate(p.rate);
     setPower(p.power);
     setParking(p.parking);
@@ -177,6 +220,28 @@ export default function HostPortal({
       return;
     }
 
+    // Strict GPS validation
+    if (!lat.trim() || !lng.trim()) {
+      setGpsTouched(true);
+      setGpsError("กรุณาระบุพิกัด ละติจูด และ ลองจิจูด (จำเป็นสำหรับการปักหมุดบนแผนที่)");
+      return;
+    }
+
+    const submitLat = parseFloat(lat);
+    const submitLng = parseFloat(lng);
+
+    if (isNaN(submitLat) || isNaN(submitLng)) {
+      setGpsTouched(true);
+      setGpsError("พิกัดละติจูดและลองจิจูดต้องเป็นตัวเลข");
+      return;
+    }
+
+    if (submitLat < 5.5 || submitLat > 20.6 || submitLng < 97.0 || submitLng > 106.0) {
+      setGpsTouched(true);
+      setGpsError("พิกัดอยู่นอกพื้นที่ประเทศไทย (ละติจูด ~5.6-20.5, ลองจิจูด ~97.3-105.7)");
+      return;
+    }
+
     const matchedDistrict = validation.matchedDistrict || district.trim();
 
     const newLoc = {
@@ -186,8 +251,8 @@ export default function HostPortal({
       province,
       district: matchedDistrict,
       category,
-      lat: parseFloat(lat) || 18.7883,
-      lng: parseFloat(lng) || 98.9853,
+      lat: submitLat,
+      lng: submitLng,
       tel: tel || "ติดต่อผ่านระบบ ThaiScout",
       email: email || "host@thaiscout.local",
       facebook: facebook || "",
@@ -213,6 +278,10 @@ export default function HostPortal({
     setDistrict("");
     setDistrictTouched(false);
     setDistrictError(null);
+    setLat("");
+    setLng("");
+    setGpsError(null);
+    setGpsTouched(false);
     setHilight("");
     setDetail("");
     setTel("");
@@ -455,31 +524,119 @@ export default function HostPortal({
             </div>
 
             {/* 3. GPS Coordinates */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 border border-slate-200 p-3 rounded-xl">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-600 mb-1">
-                  ละติจูด (Latitude)
-                </label>
-                <input
-                  type="text"
-                  value={lat}
-                  onChange={(e) => setLat(e.target.value)}
-                  placeholder="เช่น 14.3532"
-                  className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-slate-800 focus:outline-none focus:border-[#0284c7]"
-                />
+            <div className={`p-3.5 rounded-xl border-2 transition-all ${
+              gpsTouched && !isGpsValid
+                ? "bg-rose-50/50 border-rose-400"
+                : isGpsValid
+                ? "bg-emerald-50/30 border-emerald-400"
+                : "bg-slate-50 border-slate-200"
+            }`}>
+              <div className="flex items-center justify-between mb-2 flex-wrap gap-1.5">
+                <div className="flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4 text-rose-600" />
+                  <label className="text-xs font-black text-slate-800">
+                    พิกัด GPS (จำเป็นสำหรับการปักหมุดบนแผนที่) <span className="text-rose-600">*</span>
+                  </label>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {province && (
+                    <button
+                      type="button"
+                      onClick={handleAutoFillGps}
+                      className="text-[10px] font-bold text-[#0284c7] hover:text-[#0369a1] bg-white border border-[#bae6fd] hover:border-[#0284c7] px-2 py-0.5 rounded-lg transition shadow-xs flex items-center gap-1 cursor-pointer"
+                      title={`ดึงพิกัดศูนย์กลางของจังหวัด${province}`}
+                    >
+                      <span>🎯 ใช้พิกัด จ.{province}</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleGetCurrentLocation}
+                    className="text-[10px] font-bold text-slate-700 hover:text-slate-900 bg-white border border-slate-300 hover:border-slate-400 px-2 py-0.5 rounded-lg transition shadow-xs flex items-center gap-1 cursor-pointer"
+                    title="ดึงพิกัดจาก GPS ของอุปกรณ์"
+                  >
+                    <span>📍 ตำแหน่งปัจจุบัน</span>
+                  </button>
+                </div>
               </div>
-              <div>
-                <label className="block text-[11px] font-bold text-slate-600 mb-1">
-                  ลองจิจูด (Longitude)
-                </label>
-                <input
-                  type="text"
-                  value={lng}
-                  onChange={(e) => setLng(e.target.value)}
-                  placeholder="เช่น 100.5684"
-                  className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-slate-800 focus:outline-none focus:border-[#0284c7]"
-                />
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-black text-slate-700 mb-1">
+                    ละติจูด (Latitude) <span className="text-rose-600">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={lat}
+                    onChange={(e) => {
+                      setLat(e.target.value);
+                      setGpsTouched(true);
+                      setGpsError(null);
+                    }}
+                    placeholder="เช่น 18.7883 หรือ 13.7563"
+                    className={`w-full bg-white border-2 rounded-xl px-2.5 py-1.5 text-xs font-mono font-bold text-slate-800 focus:outline-none transition-all ${
+                      !lat
+                        ? "border-slate-300 focus:border-[#0284c7]"
+                        : isLatValid
+                        ? "border-emerald-500 bg-emerald-50/20"
+                        : "border-rose-500 bg-rose-50/30"
+                    }`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-black text-slate-700 mb-1">
+                    ลองจิจูด (Longitude) <span className="text-rose-600">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={lng}
+                    onChange={(e) => {
+                      setLng(e.target.value);
+                      setGpsTouched(true);
+                      setGpsError(null);
+                    }}
+                    placeholder="เช่น 98.9853 หรือ 100.5018"
+                    className={`w-full bg-white border-2 rounded-xl px-2.5 py-1.5 text-xs font-mono font-bold text-slate-800 focus:outline-none transition-all ${
+                      !lng
+                        ? "border-slate-300 focus:border-[#0284c7]"
+                        : isLngValid
+                        ? "border-emerald-500 bg-emerald-50/20"
+                        : "border-rose-500 bg-rose-50/30"
+                    }`}
+                  />
+                </div>
               </div>
+
+              {/* Real-time GPS Feedback */}
+              {isGpsValid ? (
+                <div className="mt-2 text-[11px] font-bold text-emerald-600 flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                  <span>✓ พิกัดถูกต้องพร้อมปักหมุดบนแผนที่ ({parsedLat.toFixed(4)}, {parsedLng.toFixed(4)})</span>
+                </div>
+              ) : (
+                <>
+                  {lat && !isLatValid && (
+                    <div className="mt-1.5 text-[11px] font-bold text-rose-600 flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>⚠️ ละติจูดของไทยอยู่ระหว่าง 5.6 ถึง 20.5 (เช่น 18.7883)</span>
+                    </div>
+                  )}
+                  {lng && !isLngValid && (
+                    <div className="mt-1 text-[11px] font-bold text-rose-600 flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>⚠️ ลองจิจูดของไทยอยู่ระหว่าง 97.3 ถึง 105.7 (เช่น 98.9853)</span>
+                    </div>
+                  )}
+                  {gpsError && (
+                    <div className="mt-1.5 p-2 rounded-lg bg-rose-50 border border-rose-300 text-rose-700 text-[11px] font-bold flex items-center gap-1.5">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-600" />
+                      <span>{gpsError}</span>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
 
             {/* 4. Film Production Specs (หัวใจหลักของกองถ่าย) */}
