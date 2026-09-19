@@ -2,15 +2,18 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 
-// Load data in memory
 let cachedAttractions: any[] = [];
 
 function loadData() {
   if (cachedAttractions.length === 0) {
-    const filePath = path.join(process.cwd(), "data", "attractions_compact.json");
-    if (fs.existsSync(filePath)) {
-      const raw = fs.readFileSync(filePath, "utf-8");
-      cachedAttractions = JSON.parse(raw);
+    const dataDir = path.join(process.cwd(), "data");
+    for (let i = 0; i < 5; i++) {
+      const chunkPath = path.join(dataDir, `chunk_${i}.json`);
+      if (fs.existsSync(chunkPath)) {
+        const raw = fs.readFileSync(chunkPath, "utf-8");
+        const items = JSON.parse(raw);
+        cachedAttractions.push(...items);
+      }
     }
   }
   return cachedAttractions;
@@ -24,12 +27,9 @@ export async function POST(req: Request) {
     const briefLower = (brief || "").toLowerCase().trim();
     const queryTokens = briefLower.split(/\s+/).filter((t: string) => t.length > 1);
 
-    // Scoring algorithm for Creative Brief Semantic & Keyword matching
     const scored = data.map((item) => {
       let score = 0;
-      const targetText = `${item.name_th} ${item.name_en} ${item.category} ${item.sub_type} ${item.province} ${item.district} ${item.hilight} ${item.detail}`.toLowerCase();
 
-      // Filter by province if specified
       if (province && province !== "all") {
         if (!item.province.includes(province)) {
           return { item, score: -100 };
@@ -37,7 +37,6 @@ export async function POST(req: Request) {
         score += 20;
       }
 
-      // Filter by category if specified
       if (category && category !== "all") {
         if (!item.category.includes(category)) {
           return { item, score: -100 };
@@ -45,7 +44,6 @@ export async function POST(req: Request) {
         score += 15;
       }
 
-      // Token matching
       for (const token of queryTokens) {
         if (item.name_th.toLowerCase().includes(token)) score += 25;
         if (item.hilight.toLowerCase().includes(token)) score += 20;
@@ -55,7 +53,6 @@ export async function POST(req: Request) {
         if (item.province.toLowerCase().includes(token)) score += 10;
       }
 
-      // Boost items with complete production data (coordinates, phone)
       if (item.lat && item.lng) score += 3;
       if (item.tel) score += 2;
 
@@ -71,7 +68,6 @@ export async function POST(req: Request) {
         return {
           ...item,
           relevanceScore: Math.min(Math.round(s.score * 2.5), 99),
-          // Fact-checking flags based on requirements
           hasVerifiedCoords: !!(item.lat && item.lng),
           hasOperatingHours: !!item.time,
           hasDirectContact: !!item.tel,

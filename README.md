@@ -1,0 +1,19 @@
+# 🎬 ThaiScout AI — Intelligent Location Scouting & Permit Assistant
+> **Track 1: Data to Solution (เปลี่ยนข้อมูลท่องเที่ยว ททท. ให้เป็นระบบ)**  
+> AI-Powered Creative Location Scouting สำหรับกองถ่ายภาพยนตร์, คอนเทนต์ครีเอเตอร์, และโปรดักชั่นเฮาส์
+
+---
+
+## 🌟 จุดเด่นของผลงาน
+- **เชื่อมโยงข้อมูล ททท. 8,628 แห่งทั่วประเทศ**: ครอบคลุมวัด/โบราณสถาน 2,148 แห่ง และธรรมชาติ/อุทยาน 1,778 แห่ง
+- **Creative Brief Search**: ค้นหาด้วยภาษาคนและบรีฟนามธรรมของผู้กำกับ (Mood & Tone)
+- **Grounded Fact-Checking**: ปักหมุดพิกัด GPS จริง, เวลาทำการจริง, เบอร์โทรผู้ดูแลพื้นที่จริง
+- **Anti-Hallucination**: แจ้งเตือนข้อจำกัดข้อมูลใบอนุญาตถ่ายทำ ไม่กุข้อมูลระเบียบขึ้นมาเองตามเกณฑ์สไลด์หน้า 16
+- **Scouting Board**: จัดชุดสถานที่สำหรับออกกองสำรวจหน้างาน (Recce Trip)
+
+---
+
+## 🛠️ Tech Stack
+- **Framework**: Next.js 15 (App Router), TypeScript, Tailwind CSS v4
+- **Dataset**: TAT Attractions Official Dataset (8,628 Records)
+- **Deployment**: Vercel Serverless
