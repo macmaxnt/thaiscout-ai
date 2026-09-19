@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import dynamic from "next/dynamic";
 import { 
   Clapperboard, Search, MapPin, Phone, Clock, AlertTriangle, 
@@ -180,7 +180,28 @@ export default function Home() {
     return true;
   });
 
-  const displayedLocations = activeTab === "search" ? [...matchingCustom, ...results] : scoutingList;
+  const cardsTopRef = useRef<HTMLDivElement>(null);
+
+  const rawList = activeTab === "search" ? [...matchingCustom, ...results] : scoutingList;
+
+  // Whenever a marker or card is selected, float it to index 0 (the very first card)
+  const displayedLocations = useMemo(() => {
+    if (!selectedLocation) return rawList;
+    const foundIdx = rawList.findIndex((l) => l.id === selectedLocation.id);
+    if (foundIdx === 0) return rawList;
+    if (foundIdx > 0) {
+      const selected = rawList[foundIdx];
+      const remaining = rawList.filter((_, i) => i !== foundIdx);
+      return [selected, ...remaining];
+    }
+    return [selectedLocation, ...rawList];
+  }, [rawList, selectedLocation]);
+
+  useEffect(() => {
+    if (selectedLocation) {
+      cardsTopRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [selectedLocation?.id]);
 
   return (
     <div className="min-h-screen py-4 px-3 sm:px-6 w-full flex flex-col gap-4">
@@ -412,24 +433,42 @@ export default function Home() {
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {displayedLocations.map((loc) => {
-                const isSaved = scoutingList.some((x) => x.id === loc.id);
-                const isSelected = selectedLocation?.id === loc.id;
-                const recceIndex = scoutingList.findIndex((x) => x.id === loc.id);
+            <>
+              <div ref={cardsTopRef} className="scroll-mt-4" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {displayedLocations.map((loc) => {
+                  const isSaved = scoutingList.some((x) => x.id === loc.id);
+                  const isSelected = selectedLocation?.id === loc.id;
+                  const recceIndex = scoutingList.findIndex((x) => x.id === loc.id);
 
-                return (
-                  <div
-                    key={loc.id}
-                    onClick={() => handleSelect(loc)}
-                    className={`bg-white rounded-[20px] p-4 transition duration-150 cursor-pointer flex flex-col justify-between border-[2.5px] ${
-                      isSelected
-                        ? "border-[#e11d48] shadow-[4px_4px_0px_#be123c] ring-2 ring-rose-200"
-                        : "border-[#0284c7] shadow-[3px_3px_0px_#0369a1] hover:translate-x-[-2px] hover:translate-y-[-2px]"
-                    }`}
-                  >
-                    <div>
-                      {/* Top Badges */}
+                  return (
+                    <div
+                      key={loc.id}
+                      onClick={() => handleSelect(loc)}
+                      className={`rounded-[22px] p-4 sm:p-5 transition-all duration-200 cursor-pointer flex flex-col justify-between border-[3px] ${
+                        isSelected
+                          ? "bg-gradient-to-br from-rose-50/90 via-white to-amber-50/70 border-[#e11d48] shadow-[6px_6px_0px_#9f1239] ring-4 ring-rose-300 scale-[1.01]"
+                          : "bg-white border-[#0284c7] shadow-[3px_3px_0px_#0369a1] hover:translate-x-[-2px] hover:translate-y-[-2px]"
+                      }`}
+                    >
+                      <div>
+                        {/* 🔥 Active Map Pin Highlight Banner */}
+                        {isSelected && (
+                          <div className="mb-3 bg-gradient-to-r from-rose-600 via-pink-600 to-amber-500 text-white px-3.5 py-2 rounded-xl text-xs sm:text-sm font-black flex items-center justify-between shadow-md">
+                            <div className="flex items-center gap-2">
+                              <span className="relative flex h-3 w-3">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-90"></span>
+                                <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
+                              </span>
+                              <span>📍 พิกัดที่กำลังเลือกดูจากแผนที่ (แสดงอันดับที่ 1)</span>
+                            </div>
+                            <span className="text-[11px] bg-black/25 px-2.5 py-0.5 rounded-lg font-mono font-bold tracking-wider">
+                              ACTIVE PIN
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Top Badges */}
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           {loc.isCustomHost ? (
@@ -626,6 +665,7 @@ export default function Home() {
                 );
               })}
             </div>
+            </>
           )}
 
         </div>
