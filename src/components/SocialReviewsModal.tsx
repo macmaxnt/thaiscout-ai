@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, ExternalLink, Star } from "lucide-react";
+import { X, ExternalLink } from "lucide-react";
 import { IconPhoto, IconMap2, IconStar, IconBrandGoogleMaps } from "@tabler/icons-react";
 
 interface SocialReviewsModalProps {
@@ -20,6 +20,21 @@ export default function SocialReviewsModal({ location, onClose }: SocialReviewsM
   useEffect(() => {
     fetchGooglePlacePhotos();
   }, [location]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onClose]);
 
   const fetchGooglePlacePhotos = async () => {
     if (!location) return;
@@ -56,8 +71,16 @@ export default function SocialReviewsModal({ location, onClose }: SocialReviewsM
   const prov = location?.province || "";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 backdrop-blur-xs p-3 sm:p-6 overflow-y-auto">
-      <div className="bg-white border-[3px] border-[#285185] rounded-[28px] shadow-[8px_8px_0px_#183354] w-full max-w-3xl overflow-hidden my-auto flex flex-col max-h-[94vh]">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 backdrop-blur-sm p-3 sm:p-6 overflow-y-auto"
+      onMouseDown={(event) => event.target === event.currentTarget && onClose()}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="photos-modal-title"
+        className="bg-white border border-[#285185]/30 rounded-[24px] shadow-[0_24px_70px_rgba(24,51,84,0.28)] w-full max-w-3xl overflow-hidden my-auto flex flex-col max-h-[94vh]"
+      >
         
         {/* Modal Header */}
         <div className="bg-gradient-to-r from-sky-50 via-slate-50 to-amber-50 border-b-2 border-[#285185] p-3.5 sm:px-6 flex items-center justify-between shrink-0">
@@ -67,32 +90,28 @@ export default function SocialReviewsModal({ location, onClose }: SocialReviewsM
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-base sm:text-lg font-black text-slate-900 leading-tight">
+                <h3 id="photos-modal-title" className="text-base sm:text-lg font-black text-slate-900 leading-tight">
                   ภาพถ่ายจริงจาก Google Maps
                 </h3>
-                {placesRating && (
-                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-[#fcd9bd] border border-[#d67940] text-[#7c2d12] flex items-center gap-1">
-                    <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
-                    {placesRating.toFixed(1)} / 5.0 Rating ({placesReviewCount.toLocaleString()} รีวิว)
-                  </span>
-                )}
               </div>
               <p className="text-xs font-bold text-slate-600 mt-0.5">
-                ภาพถ่ายจากผู้สำรวจสถานที่: <strong className="text-[#285185]">{name}</strong> ({prov})
+                <strong className="text-[#285185]">{name}</strong>{prov ? ` · ${prov}` : ""}
               </p>
             </div>
           </div>
 
           <button
+            type="button"
             onClick={onClose}
-            className="p-1.5 rounded-xl border-2 border-slate-300 hover:border-slate-800 hover:bg-slate-100 transition shadow-[2px_2px_0px_#94a3b8] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none shrink-0 cursor-pointer"
+            aria-label="ปิดหน้าต่างภาพถ่ายจาก Google Maps"
+            className="p-2 rounded-lg border border-slate-200 text-slate-500 hover:border-slate-400 hover:bg-slate-100 hover:text-[#1b3558] transition shrink-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#285185]/30 focus-visible:ring-offset-2"
           >
             <X className="w-5 h-5 text-slate-700" />
           </button>
         </div>
 
         {/* Content Body */}
-        <div className="p-4 sm:p-6 overflow-y-auto space-y-4">
+        <div className="p-4 sm:p-6 overflow-y-auto overscroll-contain scroll-py-6 space-y-4 bg-[#f8fafc]">
           {/* Google Place Header Summary */}
           <div className="bg-gradient-to-r from-sky-50 via-blue-50 to-indigo-50 border-2 border-[#0284c7] rounded-2xl p-3.5 sm:p-4 shadow-[3px_3px_0px_#0369a1] flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-3">
@@ -101,7 +120,7 @@ export default function SocialReviewsModal({ location, onClose }: SocialReviewsM
               </div>
               <div>
                 <h4 className="font-black text-sm text-slate-900 flex items-center gap-2">
-                  Google Maps Verified Photos
+                  แกลเลอรีภาพถ่ายสถานที่
                   {placesRating && (
                     <span className="text-xs font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
                       <IconStar size={13} fill="currentColor" /> {placesRating.toFixed(1)}
@@ -109,7 +128,7 @@ export default function SocialReviewsModal({ location, onClose }: SocialReviewsM
                   )}
                 </h4>
                 <p className="text-xs font-medium text-slate-600">
-                  ภาพถ่ายความละเอียดสูงจากนักเดินทางและผู้สำรวจจริง ({placesPhotos.length} รูป)
+                  {placesPhotos.length} รูปจาก Google Maps{placesRating ? ` · ${placesReviewCount.toLocaleString()} รีวิว` : ""}
                 </p>
               </div>
             </div>
@@ -209,8 +228,9 @@ export default function SocialReviewsModal({ location, onClose }: SocialReviewsM
           </div>
 
           <button
+            type="button"
             onClick={onClose}
-            className="btn btn-blue text-xs px-4 py-1.5 rounded-xl font-black shadow-[2px_2px_0px_#0369a1] cursor-pointer"
+            className="text-xs px-4 py-2 rounded-lg font-black bg-white hover:bg-[#eaf2f7] border border-[#b9cede] text-[#285185] transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#285185]/30 focus-visible:ring-offset-2"
           >
             ปิดหน้าต่าง
           </button>
