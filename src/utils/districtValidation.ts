@@ -78,13 +78,13 @@ export function validateDistrict(input: string, province: string): DistrictValid
       return {
         isValid: false,
         status: "is_province",
-        message: `⚠️ "${matchedProvince}" คือชื่อจังหวัด (หากหมายถึงอำเภอเมือง ให้เลือก "${capital || 'เมือง'}")`,
+        message: `"${matchedProvince}" คือชื่อจังหวัด (หากหมายถึงอำเภอเมือง ให้เลือก "${capital || 'เมือง'}")`,
       };
     }
     return {
       isValid: false,
       status: "is_province",
-      message: `❌ "${matchedProvince}" เป็นชื่อจังหวัด ไม่ใช่อำเภอในจังหวัด${province}`,
+      message: `"${matchedProvince}" เป็นชื่อจังหวัด ไม่ใช่อำเภอในจังหวัด${province}`,
     };
   }
 
@@ -106,7 +106,7 @@ export function validateDistrict(input: string, province: string): DistrictValid
         status: "in_other_province",
         otherProvince: otherProv,
         matchedDistrict: otherMatch,
-        message: `❌ "${raw}" เป็น${otherPrefix}${otherMatch} ในจังหวัด${otherProv} (ไม่ใช่จังหวัด${province})`,
+        message: `"${raw}" เป็น${otherPrefix}${otherMatch} ในจังหวัด${otherProv} (ไม่ใช่จังหวัด${province})`,
       };
     }
   }
@@ -115,6 +115,6 @@ export function validateDistrict(input: string, province: string): DistrictValid
   return {
     isValid: false,
     status: "not_found",
-    message: `❌ ไม่พบอำเภอ/เขต "${raw}" ในจังหวัด${province}`,
+    message: `ไม่พบอำเภอ/เขต "${raw}" ในจังหวัด${province}`,
   };
 }

@@ -163,13 +163,13 @@ export function searchProvinces(searchTerm: string, selectedRegion: string = "�
 }
 
 export const REGION_LIST = [
-  { id: "all", name: "ทั่วประเทศ (ทุกจังหวัด)", icon: "🌐", count: 77 },
-  { id: "region:ภาคกลาง", name: "ภาคกลาง", icon: "🏛️", count: 22 },
-  { id: "region:ภาคเหนือ", name: "ภาคเหนือ", icon: "🏔️", count: 9 },
-  { id: "region:ภาคตะวันออกเฉียงเหนือ", name: "ภาคอีสาน (ตะวันออกเฉียงเหนือ)", icon: "🌾", count: 20 },
-  { id: "region:ภาคใต้", name: "ภาคใต้", icon: "🏖️", count: 14 },
-  { id: "region:ภาคตะวันออก", name: "ภาคตะวันออก", icon: "🌊", count: 7 },
-  { id: "region:ภาคตะวันตก", name: "ภาคตะวันตก", icon: "⛰️", count: 5 },
+  { id: "all", name: "ทั่วประเทศ (ทุกจังหวัด)", icon: "world", count: 77 },
+  { id: "region:ภาคกลาง", name: "ภาคกลาง", icon: "central", count: 22 },
+  { id: "region:ภาคเหนือ", name: "ภาคเหนือ", icon: "north", count: 9 },
+  { id: "region:ภาคตะวันออกเฉียงเหนือ", name: "ภาคอีสาน (ตะวันออกเฉียงเหนือ)", icon: "northeast", count: 20 },
+  { id: "region:ภาคใต้", name: "ภาคใต้", icon: "south", count: 14 },
+  { id: "region:ภาคตะวันออก", name: "ภาคตะวันออก", icon: "east", count: 7 },
+  { id: "region:ภาคตะวันตก", name: "ภาคตะวันตก", icon: "west", count: 5 },
 ] as const;
 
 export function getProvincesInRegion(regionKey: string): string[] {
@@ -179,4 +179,3 @@ export function getProvincesInRegion(regionKey: string): string[] {
   const cleanRegion = regionKey.replace("region:", "");
   return THAI_PROVINCES.filter((p) => p.region === cleanRegion).map((p) => p.name);
 }
-
