@@ -278,44 +278,6 @@ export default function Home() {
           </button>
         </div>
 
-        {/* Sub-actions for Scout Mode */}
-        {currentMode === "scout" && (
-          <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={() => {
-                setActiveTab("search");
-                setFilterOnlyPinned(false);
-              }}
-              className={`btn px-3 py-1.5 rounded-xl text-xs font-black ${
-                activeTab === "search" && !filterOnlyPinned ? "btn-blue" : "btn-purple opacity-70 hover:opacity-100"
-              }`}
-            >
-              🔍 ค้นหา ({[...matchingCustom, ...results].length})
-            </button>
-
-            <button
-              onClick={() => {
-                setActiveTab("scout");
-                setFilterOnlyPinned(false);
-              }}
-              className={`btn px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 ${
-                activeTab === "scout" && !filterOnlyPinned ? "btn-mint" : "btn-purple opacity-70 hover:opacity-100"
-              }`}
-            >
-              🎬 Recce Board ({scoutingList.length})
-            </button>
-
-            {scoutingList.length > 0 && (
-              <button
-                onClick={handleClearScout}
-                className="btn text-xs px-2.5 py-1.5 rounded-xl font-black bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-700 shadow-[2px_2px_0px_#fca5a5] flex items-center gap-1 transition"
-                title="ล้างหมุดทั้งหมดในรายการ"
-              >
-                🗑️ ล้างหมุด ({scoutingList.length})
-              </button>
-            )}
-          </div>
-        )}
       </header>
 
       {/* 🧭 2. Conditional Mode View: Host Portal vs Scout & Recce Board */}
@@ -428,42 +390,61 @@ export default function Home() {
 
           </div>
 
-          {/* System Boundary Bar & Quick Filter Controls */}
-          <div className="px-4 py-2.5 bg-[#f0f9ff] border-2 border-[#0284c7] rounded-xl shadow-[3px_3px_0px_#0369a1] text-[#0c4a6e] font-bold text-xs sm:text-sm flex flex-wrap items-center justify-between gap-2">
+          {/* 🎯 Toolbar เหนือการ์ด: สองกล่องหลัก ค้นหาทั้งหมด & ที่ปักหมุดไว้ (ภาษาไทย ชัดเจน) */}
+          <div className="px-3.5 py-2.5 bg-white border-[2.5px] border-[#0284c7] rounded-[20px] shadow-[4px_4px_0px_#0369a1] flex flex-wrap items-center justify-between gap-2.5">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="bg-[#bae6fd] border border-[#0284c7] rounded-lg px-2 py-0.5 text-xs font-black">
-                TAT Grounding
-              </span>
-              <span className="font-semibold text-slate-800 hidden sm:inline">8,628 พิกัดจริงในดาต้าเบส</span>
-
-              {/* Filter only pinned toggle */}
+              {/* กล่องที่ 1: ค้นหาทั้งหมด */}
               <button
                 onClick={() => {
-                  if (scoutingList.length > 0) {
-                    setFilterOnlyPinned(!filterOnlyPinned);
-                  }
+                  setActiveTab("search");
+                  setFilterOnlyPinned(false);
                 }}
-                disabled={scoutingList.length === 0}
-                className={`btn text-xs px-2.5 py-1 rounded-xl font-black flex items-center gap-1.5 transition ${
-                  filterOnlyPinned
-                    ? "bg-[#f43f5e] border-[#be123c] text-white shadow-[2px_2px_0px_#881337]"
-                    : scoutingList.length > 0
-                    ? "bg-white border-[#f43f5e] text-[#be123c] hover:bg-rose-50 shadow-[2px_2px_0px_#f43f5e]"
-                    : "bg-slate-100 border-slate-300 text-slate-400 cursor-not-allowed opacity-60"
+                className={`btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-black flex items-center gap-1.5 transition ${
+                  activeTab === "search" && !filterOnlyPinned
+                    ? "btn-blue shadow-[2px_2px_0px_#0369a1]"
+                    : "bg-slate-100 border-2 border-slate-300 text-slate-700 hover:bg-slate-200"
                 }`}
-                title={scoutingList.length === 0 ? "ยังไม่มีหมุดที่ปักไว้ (กด '+ ปักหมุด' จากการ์ดหรือแผนที่)" : "กรองแสดงเฉพาะจุดที่ปักหมุดไว้"}
               >
-                <span>📌 {filterOnlyPinned ? "กำลังดูเฉพาะที่ปักหมุด" : "เลือกเฉพาะที่ปักหมุด"}</span>
-                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${filterOnlyPinned ? "bg-white text-rose-700" : "bg-rose-100 text-rose-800"}`}>
+                <Search className="w-4 h-4" />
+                <span>ค้นหาทั้งหมด</span>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-mono font-bold ${
+                  activeTab === "search" && !filterOnlyPinned
+                    ? "bg-white/30 text-white"
+                    : "bg-slate-200 text-slate-800"
+                }`}>
+                  {[...matchingCustom, ...results].length}
+                </span>
+              </button>
+
+              {/* กล่องที่ 2: ที่ปักหมุดไว้ (ภาษาไทย) */}
+              <button
+                onClick={() => {
+                  setActiveTab("scout");
+                  setFilterOnlyPinned(true);
+                }}
+                className={`btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-black flex items-center gap-1.5 transition ${
+                  activeTab === "scout" || filterOnlyPinned
+                    ? "btn-mint shadow-[2px_2px_0px_#15803d]"
+                    : scoutingList.length > 0
+                    ? "bg-white border-2 border-emerald-500 text-emerald-800 hover:bg-emerald-50 shadow-[2px_2px_0px_#15803d]"
+                    : "bg-slate-100 border-2 border-slate-300 text-slate-400 opacity-60"
+                }`}
+              >
+                <span>📌 ที่ปักหมุดไว้</span>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-mono font-bold ${
+                  activeTab === "scout" || filterOnlyPinned
+                    ? "bg-white/30 text-white"
+                    : "bg-emerald-100 text-emerald-800"
+                }`}>
                   {scoutingList.length}
                 </span>
               </button>
 
-              {/* Clear pins button */}
+              {/* ปุ่มล้างหมุด */}
               {scoutingList.length > 0 && (
                 <button
                   onClick={handleClearScout}
-                  className="btn text-xs px-2.5 py-1 rounded-xl font-black bg-white hover:bg-rose-50 border border-rose-300 text-rose-700 shadow-[2px_2px_0px_#fca5a5] flex items-center gap-1 transition"
+                  className="btn text-xs px-2.5 py-1.5 rounded-xl font-black bg-rose-50 hover:bg-rose-100 border-2 border-rose-300 text-rose-700 shadow-[2px_2px_0px_#fca5a5] flex items-center gap-1 transition"
                   title="ล้างหมุดสำรวจทั้งหมด"
                 >
                   <span>🗑️ ล้างหมุด</span>
@@ -472,15 +453,10 @@ export default function Home() {
             </div>
 
             <div className="flex items-center gap-2">
-              {filterOnlyPinned && (
-                <button
-                  onClick={() => setFilterOnlyPinned(false)}
-                  className="text-xs text-[#0284c7] hover:underline font-black"
-                >
-                  ← ดูทั้งหมด
-                </button>
-              )}
-              <div className="font-mono text-xs sm:text-sm text-[#0284c7] font-black bg-white px-2.5 py-1 rounded-md border border-[#bae6fd]">
+              <span className="text-xs font-bold text-slate-500 hidden sm:inline">
+                พิกัดจริง ททท. & Host
+              </span>
+              <div className="font-mono text-xs sm:text-sm text-[#0284c7] font-black bg-[#f0f9ff] px-2.5 py-1 rounded-lg border border-[#bae6fd]">
                 {displayedLocations.length} โลเคชัน
               </div>
             </div>
