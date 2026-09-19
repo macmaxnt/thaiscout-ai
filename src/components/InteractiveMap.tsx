@@ -317,6 +317,37 @@ export default function InteractiveMap({
             `
                 : ""
             }
+
+            ${
+              onOpenSocial
+                ? `
+              <button
+                id="map-popup-photos-${loc.id}"
+                type="button"
+                style="
+                  padding: 6px 10px;
+                  border-radius: 10px;
+                  font-size: 11px;
+                  font-weight: 900;
+                  cursor: pointer;
+                  border: 2px solid #ea580c;
+                  background-color: #fff7ed;
+                  color: #9a3412;
+                  box-shadow: 2px 2px 0px #c2410c;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  gap: 3px;
+                  font-family: inherit;
+                  white-space: nowrap;
+                  transition: all 0.1s ease;
+                "
+              >
+                📸 รูปจริง
+              </button>
+            `
+                : ""
+            }
           </div>
         </div>
       `;
@@ -338,6 +369,15 @@ export default function InteractiveMap({
           e.stopPropagation();
           e.preventDefault();
           onOpenRag(loc);
+        });
+      }
+
+      const photosBtn = popupDiv.querySelector(`#map-popup-photos-${loc.id}`);
+      if (photosBtn && onOpenSocial) {
+        photosBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          onOpenSocial(loc);
         });
       }
 

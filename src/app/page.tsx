@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 
 import RagModal from "@/components/RagModal";
+import SocialReviewsModal from "@/components/SocialReviewsModal";
 import ProvinceSelector from "@/components/ProvinceSelector";
 import { detectProvinceFromText, getProvincesInRegion, REGION_LIST } from "@/data/provinces";
 
@@ -34,6 +35,7 @@ export default function Home() {
   const [mapPinSelectedId, setMapPinSelectedId] = useState<string | null>(null);
   const [filterOnlyPinned, setFilterOnlyPinned] = useState(false);
   const [ragTargetLocation, setRagTargetLocation] = useState<any | null>(null);
+  const [socialModalLocation, setSocialModalLocation] = useState<any | null>(null);
   const [activeTab, setActiveTab] = useState<"search" | "scout">("search");
   const [totalDbMatches, setTotalDbMatches] = useState<number>(8628);
   const [currentLimit, setCurrentLimit] = useState<number>(400);
@@ -678,6 +680,17 @@ export default function Home() {
                           <Sparkles className="w-3.5 h-3.5 text-[#d67940]" />
                           AI RAG
                         </button>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSocialModalLocation(loc);
+                          }}
+                          className="btn bg-[#fff7ed] hover:bg-[#ffedd5] border-2 border-[#ea580c] text-[#9a3412] text-xs sm:text-sm px-3 py-1.5 rounded-xl font-black flex items-center gap-1.5 shadow-[2px_2px_0px_#c2410c]"
+                          title="ดูรูปภาพจริงจาก Google Maps และคลิปสำรวจสถานที่"
+                        >
+                          <span>📸 รูป Google Maps</span>
+                        </button>
                       </div>
 
                       <button
@@ -733,6 +746,7 @@ export default function Home() {
               }
             }}
             onOpenRag={(loc) => setRagTargetLocation(loc)}
+            onOpenSocial={(loc) => setSocialModalLocation(loc)}
           />
         </div>
 
@@ -746,6 +760,14 @@ export default function Home() {
           isPinned={scoutingList.some((x) => x.id === ragTargetLocation.id)}
           onToggleScout={toggleScout}
           onClose={() => setRagTargetLocation(null)}
+        />
+      )}
+
+      {/* 📸 Google Maps Place Photos & Reviews Modal */}
+      {socialModalLocation && (
+        <SocialReviewsModal
+          location={socialModalLocation}
+          onClose={() => setSocialModalLocation(null)}
         />
       )}
     </div>

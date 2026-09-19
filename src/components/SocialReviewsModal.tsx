@@ -36,24 +36,52 @@ export default function SocialReviewsModal({ location, onClose }: SocialReviewsM
   const [loading, setLoading] = useState(true);
   const [videoLoading, setVideoLoading] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<"video" | "photos" | "social" | "reviews" | "production">("video");
+  const [activeTab, setActiveTab] = useState<"photos" | "video" | "social" | "reviews" | "production">("photos");
   const [selectedAngle, setSelectedAngle] = useState<string>("");
   const [customSearchQuery, setCustomSearchQuery] = useState<string>("");
 
-  // Google Places Photos state (Disabled by user request)
+  // Google Places Photos state
   const [placesPhotos, setPlacesPhotos] = useState<any[]>([]);
   const [placesRating, setPlacesRating] = useState<number | null>(null);
   const [placesReviewCount, setPlacesReviewCount] = useState<number>(0);
+  const [placesGoogleMapsUri, setPlacesGoogleMapsUri] = useState<string | null>(null);
   const [placesLoading, setPlacesLoading] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<any | null>(null);
 
   useEffect(() => {
     fetchSocialReviews("");
-    // fetchGooglePlacePhotos(); // Disabled by user request
+    fetchGooglePlacePhotos();
   }, [location]);
 
   const fetchGooglePlacePhotos = async () => {
-    // Disabled
+    if (!location) return;
+    setPlacesLoading(true);
+    try {
+      const res = await fetch("/api/place-photos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: location.name_th,
+          province: location.province,
+          lat: location.lat,
+          lng: location.lng,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setPlacesPhotos(json.photos || []);
+        setPlacesRating(json.rating || null);
+        setPlacesReviewCount(json.userRatingCount || 0);
+        setPlacesGoogleMapsUri(json.googleMapsUri || null);
+        if (json.photos && json.photos.length > 0) {
+          setSelectedPhoto(json.photos[0]);
+        }
+      }
+    } catch (err) {
+      console.error("Place photos fetch error:", err);
+    } finally {
+      setPlacesLoading(false);
+    }
   };
 
   const fetchSocialReviews = async (angleQuery: string) => {
@@ -139,6 +167,22 @@ export default function SocialReviewsModal({ location, onClose }: SocialReviewsM
         {/* Navigation Tabs */}
         <div className="bg-slate-50 px-4 sm:px-6 py-2 border-b border-slate-200 flex items-center gap-2 overflow-x-auto shrink-0 scrollbar-none">
           <button
+            onClick={() => setActiveTab("photos")}
+            className={`px-3 py-1.5 rounded-xl text-xs sm:text-sm font-black transition flex items-center gap-1.5 shrink-0 cursor-pointer ${
+              activeTab === "photos"
+                ? "bg-[#0284c7] text-white shadow-[2px_2px_0px_#0369a1]"
+                : "bg-white border border-slate-300 text-slate-700 hover:bg-slate-100"
+            }`}
+          >
+            <span>📸 รูปถ่ายจริง Google Maps</span>
+            {placesPhotos.length > 0 && (
+              <span className="bg-emerald-100 text-emerald-800 text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold">
+                {placesPhotos.length}
+              </span>
+            )}
+          </button>
+
+          <button
             onClick={() => setActiveTab("video")}
             className={`px-3 py-1.5 rounded-xl text-xs sm:text-sm font-black transition flex items-center gap-1.5 shrink-0 cursor-pointer ${
               activeTab === "video"
@@ -149,7 +193,6 @@ export default function SocialReviewsModal({ location, onClose }: SocialReviewsM
             <Film className="w-3.5 h-3.5" />
             <span>▶️ คลิปสำรวจจริงในเว็บ</span>
           </button>
-
 
           <button
             onClick={() => setActiveTab("social")}
@@ -190,13 +233,126 @@ export default function SocialReviewsModal({ location, onClose }: SocialReviewsM
 
         {/* Content Body */}
         <div className="p-4 sm:p-6 overflow-y-auto space-y-4">
-          {loading ? (
+          {loading && activeTab !== "photos" ? (
             <div className="py-12 text-center text-slate-500 space-y-2">
               <div className="w-8 h-8 border-4 border-[#0284c7] border-t-transparent rounded-full animate-spin mx-auto" />
               <p className="text-xs font-bold text-slate-600">กำลังค้นหาคลิปวิดีโอของสถานที่จริง...</p>
             </div>
           ) : (
             <>
+              {/* TAB: GOOGLE PLACES REAL PHOTOS */}
+              {activeTab === "photos" && (
+                <div className="space-y-4">
+                  {/* Google Place Header Summary */}
+                  <div className="bg-gradient-to-r from-sky-50 via-blue-50 to-indigo-50 border-2 border-[#0284c7] rounded-2xl p-4 shadow-[3px_3px_0px_#0369a1] flex items-center justify-between flex-wrap gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-white p-2.5 rounded-xl border border-sky-200 text-2xl shadow-xs">
+                        🗺️
+                      </div>
+                      <div>
+                        <h4 className="font-black text-sm text-slate-900 flex items-center gap-2">
+                          Google Maps Verified Photos & Reviews
+                          {placesRating && (
+                            <span className="text-xs font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
+                              ⭐ {placesRating.toFixed(1)}
+                            </span>
+                          )}
+                        </h4>
+                        <p className="text-xs font-medium text-slate-600">
+                          ภาพถ่ายและรีวิวจริงจากผู้ใช้งานบน Google Maps ({placesReviewCount.toLocaleString()} รีวิว)
+                        </p>
+                      </div>
+                    </div>
+
+                    <a
+                      href={placesGoogleMapsUri || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${name} ${prov}`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-blue text-xs px-3.5 py-1.5 rounded-xl font-black flex items-center gap-1.5 shadow-[2px_2px_0px_#0369a1]"
+                    >
+                      <span>เปิดดูใน Google Maps</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+
+                  {placesLoading ? (
+                    <div className="py-12 text-center text-slate-500">
+                      <div className="w-8 h-8 border-4 border-[#0284c7] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                      <p className="text-xs font-bold text-slate-700">กำลังดึงภาพถ่ายจริงจาก Google Maps API...</p>
+                    </div>
+                  ) : placesPhotos.length === 0 ? (
+                    <div className="text-center py-12 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-300 p-6">
+                      <p className="text-sm font-bold text-slate-700">ไม่พบรูปภาพถ่ายที่เชื่อมโยงกับพิกัดนี้บน Google Maps</p>
+                      <p className="text-xs text-slate-500 mt-1">สามารถคลิกปุ่ม &quot;เปิดดูใน Google Maps&quot; เพื่อดูข้อมูลเพิ่มเติมโดยตรงได้ครับ</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {/* Featured Big Photo View */}
+                      {selectedPhoto && (
+                        <div className="relative rounded-2xl overflow-hidden border-2 border-slate-300 shadow-md bg-slate-950 aspect-video max-h-[380px] flex items-center justify-center">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={selectedPhoto.photoUri}
+                            alt={name}
+                            className="w-full h-full object-contain"
+                          />
+                          <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/85 via-black/50 to-transparent p-3 text-white text-xs flex items-center justify-between flex-wrap gap-2">
+                            <div>
+                              <span className="font-semibold text-slate-300">ถ่ายโดย: </span>
+                              {selectedPhoto.authorUri ? (
+                                <a
+                                  href={selectedPhoto.authorUri}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="font-bold underline hover:text-sky-300"
+                                >
+                                  {selectedPhoto.authorName}
+                                </a>
+                              ) : (
+                                <span className="font-bold">{selectedPhoto.authorName}</span>
+                              )}
+                            </div>
+                            {selectedPhoto.googleMapsUri && (
+                              <a
+                                href={selectedPhoto.googleMapsUri}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-bold text-sky-300 hover:text-white flex items-center gap-1 text-[11px]"
+                              >
+                                ดูรูปนี้บน Google Maps ↗
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Thumbnail Gallery */}
+                      <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+                        {placesPhotos.map((p, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => setSelectedPhoto(p)}
+                            className={`aspect-square rounded-xl overflow-hidden border-2 transition cursor-pointer ${
+                              selectedPhoto?.photoUri === p.photoUri
+                                ? "border-[#0284c7] scale-105 shadow-[2px_2px_0px_#0284c7]"
+                                : "border-slate-200 hover:border-slate-400 opacity-80 hover:opacity-100"
+                            }`}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={p.photoUri}
+                              alt={`${name} photo ${idx + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* TAB 1: IN-APP VIDEO PLAYER */}
               {activeTab === "video" && (
                 <div className="space-y-3.5">
