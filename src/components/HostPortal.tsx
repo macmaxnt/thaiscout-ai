@@ -1,12 +1,16 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { 
   Building2, Home, PlusCircle, CheckCircle2, Sparkles, MapPin, 
   Phone, Zap, Truck, DollarSign, Trash2, ArrowRight, ShieldCheck, 
-  Camera, Eye, Layers, AlertCircle, Mail
+  Camera, Eye, Layers, AlertCircle, Mail, AlertTriangle
 } from "lucide-react";
 import ProvinceSelector from "@/components/ProvinceSelector";
+import { 
+  getDistrictsByProvince, 
+  validateDistrict 
+} from "@/utils/districtValidation";
 
 interface HostPortalProps {
   customLocations: any[];
@@ -24,6 +28,8 @@ export default function HostPortal({
   const [name, setName] = useState("");
   const [province, setProvince] = useState("เชียงใหม่");
   const [district, setDistrict] = useState("");
+  const [districtTouched, setDistrictTouched] = useState(false);
+  const [districtError, setDistrictError] = useState<string | null>(null);
   const [category, setCategory] = useState("บ้าน & เรือนไทย");
   const [lat, setLat] = useState("");
   const [lng, setLng] = useState("");
@@ -38,6 +44,27 @@ export default function HostPortal({
   const [facebook, setFacebook] = useState("");
   const [isAiGenerating, setIsAiGenerating] = useState(false);
   const [successNotice, setSuccessNotice] = useState(false);
+
+  // Available districts and real-time validation
+  const availableDistricts = useMemo(() => {
+    return getDistrictsByProvince(province);
+  }, [province]);
+
+  const districtValidation = useMemo(() => {
+    return validateDistrict(district, province);
+  }, [district, province]);
+
+  const handleProvinceChange = (newProv: string) => {
+    setProvince(newProv);
+    if (district) {
+      const val = validateDistrict(district, newProv);
+      if (!val.isValid) {
+        setDistrict("");
+        setDistrictTouched(false);
+        setDistrictError(null);
+      }
+    }
+  };
 
   const presets = [
     {
@@ -97,6 +124,8 @@ export default function HostPortal({
     setName(p.title);
     setProvince(p.prov);
     setDistrict(p.dist);
+    setDistrictTouched(false);
+    setDistrictError(null);
     setCategory(p.cat);
     setLat(p.lat);
     setLng(p.lng);
@@ -135,12 +164,27 @@ export default function HostPortal({
     e.preventDefault();
     if (!name || !province) return;
 
+    if (!district.trim()) {
+      setDistrictTouched(true);
+      setDistrictError("กรุณาระบุหรือเลือกอำเภอ / เขต");
+      return;
+    }
+
+    const validation = validateDistrict(district, province);
+    if (!validation.isValid) {
+      setDistrictTouched(true);
+      setDistrictError(validation.message);
+      return;
+    }
+
+    const matchedDistrict = validation.matchedDistrict || district.trim();
+
     const newLoc = {
       id: `host_${Date.now()}`,
       name_th: name,
       name_en: name,
       province,
-      district: district || "เมือง",
+      district: matchedDistrict,
       category,
       lat: parseFloat(lat) || 18.7883,
       lng: parseFloat(lng) || 98.9853,
@@ -166,6 +210,9 @@ export default function HostPortal({
 
     // Reset Form
     setName("");
+    setDistrict("");
+    setDistrictTouched(false);
+    setDistrictError(null);
     setHilight("");
     setDetail("");
     setTel("");
@@ -283,23 +330,110 @@ export default function HostPortal({
                 </label>
                 <ProvinceSelector
                   value={province}
-                  onChange={setProvince}
+                  onChange={handleProvinceChange}
                   allowAll={false}
                   placeholder="เลือกจังหวัดที่ตั้ง..."
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-black text-slate-800 mb-1">
-                  อำเภอ / เขต
-                </label>
-                <input
-                  type="text"
-                  value={district}
-                  onChange={(e) => setDistrict(e.target.value)}
-                  placeholder="เช่น เมือง, พระประแดง"
-                  className="w-full bg-white border-2 border-slate-300 rounded-xl px-2.5 py-2 text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0284c7]"
-                />
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-black text-slate-800">
+                    อำเภอ / เขต <span className="text-rose-600">*</span>
+                  </label>
+                  {province && availableDistricts.length > 0 && (
+                    <span className="text-[10px] font-black text-[#0284c7]">
+                      {availableDistricts.length} อำเภอ
+                    </span>
+                  )}
+                </div>
+
+                <div className="relative">
+                  <input
+                    type="text"
+                    list="host-district-list"
+                    value={district}
+                    onChange={(e) => {
+                      setDistrict(e.target.value);
+                      setDistrictTouched(true);
+                      setDistrictError(null);
+                    }}
+                    onBlur={() => setDistrictTouched(true)}
+                    placeholder={
+                      province
+                        ? `พิมพ์ชื่อ หรือเลือกอำเภอ...`
+                        : "โปรดเลือกจังหวัดก่อน"
+                    }
+                    disabled={!province}
+                    className={`w-full bg-white border-2 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-900 focus:outline-none transition-all ${
+                      !district
+                        ? "border-slate-300 focus:border-[#0284c7]"
+                        : districtValidation.isValid
+                        ? "border-emerald-500 bg-emerald-50/20 focus:border-emerald-600"
+                        : "border-rose-500 bg-rose-50/40 focus:border-rose-600"
+                    }`}
+                  />
+                  <datalist id="host-district-list">
+                    {availableDistricts.map((d) => (
+                      <option key={d} value={d}>
+                        {province === "กรุงเทพมหานคร" ? `เขต${d}` : `อ.${d}`}
+                      </option>
+                    ))}
+                  </datalist>
+                </div>
+
+                {/* Quick Dropdown Picker */}
+                {availableDistricts.length > 0 && (
+                  <div className="mt-1">
+                    <select
+                      value={districtValidation.isValid ? (districtValidation.matchedDistrict || district) : ""}
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          setDistrict(e.target.value);
+                          setDistrictTouched(true);
+                          setDistrictError(null);
+                        }
+                      }}
+                      className="w-full text-[11px] font-bold text-slate-700 bg-slate-50 border border-slate-300 hover:border-[#0284c7] rounded-lg px-2 py-1 cursor-pointer focus:outline-none"
+                    >
+                      <option value="">▼ เลือกจากรายชื่ออำเภอใน {province} ({availableDistricts.length})</option>
+                      {availableDistricts.map((d) => (
+                        <option key={d} value={d}>
+                          {province === "กรุงเทพมหานคร" ? `เขต${d}` : `อ.${d}`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Real-time Validation Error Banner */}
+                {districtTouched && district && !districtValidation.isValid && (
+                  <div className="mt-1.5 p-2 rounded-xl bg-rose-50 border border-rose-300 text-rose-800 text-[11px] font-black flex items-start gap-1.5 shadow-sm animate-in fade-in duration-150">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-600 mt-0.5" />
+                    <div className="flex-1">
+                      <div>{districtValidation.message}</div>
+                      <div className="text-[10px] text-rose-600 font-semibold mt-0.5">
+                        💡 กรุณาเลือกอำเภอที่ถูกต้องของ {province}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Valid Success Indicator */}
+                {district && districtValidation.isValid && (
+                  <div className="mt-1 text-[11px] font-bold text-emerald-600 flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                    <span>✓ {districtValidation.message}</span>
+                  </div>
+                )}
+
+                {/* Required Error Message */}
+                {districtError && !district && (
+                  <div className="mt-1 text-[11px] font-bold text-rose-600 flex items-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{districtError}</span>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -547,7 +681,7 @@ export default function HostPortal({
                         {loc.name_th}
                       </h4>
                       <p className="text-[11px] font-bold text-slate-500">
-                        📍 {loc.province} {loc.district ? `• อ.${loc.district}` : ""}
+                        📍 {loc.province} {loc.district ? `• ${loc.province === "กรุงเทพมหานคร" ? "เขต" : "อ."}${loc.district.replace(/^(อ\.|เขต)/, "")}` : ""}
                       </p>
 
                       {loc.hilight && (
