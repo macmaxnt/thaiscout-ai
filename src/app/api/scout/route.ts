@@ -12,7 +12,15 @@ function loadData() {
       if (fs.existsSync(chunkPath)) {
         const raw = fs.readFileSync(chunkPath, "utf-8");
         const items = JSON.parse(raw);
-        cachedAttractions.push(...items);
+        for (const item of items) {
+          // Safety guardrail: filter any coordinates outside Thailand
+          if (item.lat && item.lng) {
+            if (item.lat < 5.5 || item.lat > 20.6 || item.lng < 97.0 || item.lng > 106.0) {
+              continue;
+            }
+          }
+          cachedAttractions.push(item);
+        }
       }
     }
   }

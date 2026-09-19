@@ -51,6 +51,11 @@ function calculateTotalDistance(locs: MapLocation[]): number {
   return Math.round(total * 10) / 10;
 }
 
+function isThailandCoords(lat?: number, lng?: number): boolean {
+  if (typeof lat !== "number" || typeof lng !== "number") return false;
+  return lat >= 5.5 && lat <= 20.6 && lng >= 97.0 && lng <= 106.0;
+}
+
 export default function InteractiveMap({
   locations,
   selectedLocation,
@@ -79,8 +84,8 @@ export default function InteractiveMap({
     if (mapInstanceRef.current) return;
 
     const map = L.map(mapContainerRef.current, {
-      center: [18.7883, 98.9853],
-      zoom: 9,
+      center: [13.7367, 100.5231],
+      zoom: 6,
       zoomControl: true,
     });
 
@@ -147,11 +152,11 @@ export default function InteractiveMap({
     }
 
     const locsToRender = filterOnlyPinned ? scoutingList : locations;
-    const validLocs = locsToRender.filter((l) => l.lat && l.lng);
+    const validLocs = locsToRender.filter((l) => isThailandCoords(l.lat, l.lng));
     const bounds: [number, number][] = [];
 
     // Polyline for Recce Points
-    const validRecce = scoutingList.filter((l) => l.lat && l.lng);
+    const validRecce = scoutingList.filter((l) => isThailandCoords(l.lat, l.lng));
     if (validRecce.length >= 2) {
       const latLngs = validRecce.map((l) => [l.lat!, l.lng!] as [number, number]);
       routePolylineRef.current = L.polyline(latLngs, {
@@ -361,13 +366,13 @@ export default function InteractiveMap({
     const map = mapInstanceRef.current;
     if (!map) return;
     const locsToFit = filterOnlyPinned ? scoutingList : locations;
-    const valid = locsToFit.filter((l) => l.lat && l.lng);
+    const valid = locsToFit.filter((l) => isThailandCoords(l.lat, l.lng));
     if (valid.length === 0) return;
     const bounds = valid.map((l) => [l.lat!, l.lng!] as [number, number]);
     map.fitBounds(bounds, { padding: [50, 50], maxZoom: 13 });
   };
 
-  const validRecce = scoutingList.filter((x) => x.lat && x.lng);
+  const validRecce = scoutingList.filter((x) => isThailandCoords(x.lat, x.lng));
   let googleMapsUrl = "";
   if (validRecce.length > 0) {
     const origin = `${validRecce[0].lat},${validRecce[0].lng}`;
