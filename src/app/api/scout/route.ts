@@ -2,25 +2,50 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 
-let cachedAttractions: any[] = [];
+import { supabase } from "@/utils/supabase";
 
-function loadData() {
-  if (cachedAttractions.length === 0) {
-    const dataDir = path.join(process.cwd(), "data");
-    for (let i = 0; i < 5; i++) {
-      const chunkPath = path.join(dataDir, `chunk_${i}.json`);
-      if (fs.existsSync(chunkPath)) {
-        const raw = fs.readFileSync(chunkPath, "utf-8");
-        const items = JSON.parse(raw);
-        for (const item of items) {
-          // Safety guardrail: filter any coordinates outside Thailand
-          if (item.lat && item.lng) {
-            if (item.lat < 5.5 || item.lat > 20.6 || item.lng < 97.0 || item.lng > 106.0) {
-              continue;
-            }
-          }
-          cachedAttractions.push(item);
+let cachedAttractions: any[] = [];
+let isFetchingFromSupabase = false;
+
+async function loadData(): Promise<any[]> {
+  if (cachedAttractions.length > 0) {
+    return cachedAttractions;
+  }
+
+  // 1. Try loading directly from Supabase thaiscout_locations table
+  try {
+    const { data: supaData, error } = await supabase
+      .from("thaiscout_locations")
+      .select("*")
+      .limit(10000);
+
+    if (!error && Array.isArray(supaData) && supaData.length > 0) {
+      cachedAttractions = supaData.filter((item) => {
+        if (item.lat && item.lng) {
+          return item.lat >= 5.5 && item.lat <= 20.6 && item.lng >= 97.0 && item.lng <= 106.0;
         }
+        return true;
+      });
+      return cachedAttractions;
+    }
+  } catch (e) {
+    console.warn("Supabase fetch failed, falling back to local files:", e);
+  }
+
+  // 2. Fallback to local files
+  const dataDir = path.join(process.cwd(), "data");
+  for (let i = 0; i < 5; i++) {
+    const chunkPath = path.join(dataDir, `chunk_${i}.json`);
+    if (fs.existsSync(chunkPath)) {
+      const raw = fs.readFileSync(chunkPath, "utf-8");
+      const items = JSON.parse(raw);
+      for (const item of items) {
+        if (item.lat && item.lng) {
+          if (item.lat < 5.5 || item.lat > 20.6 || item.lng < 97.0 || item.lng > 106.0) {
+            continue;
+          }
+        }
+        cachedAttractions.push(item);
       }
     }
   }
@@ -38,7 +63,7 @@ const STOP_WORDS = new Set([
 export async function POST(req: Request) {
   try {
     const { brief, province, category, limit } = await req.json();
-    const data = loadData();
+    const data = await loadData();
 
     const briefLower = (brief || "").toLowerCase().trim();
     const queryTokens = briefLower.split(/[\s,()]+/).filter((t: string) => t.length > 1);
