@@ -2,6 +2,16 @@
 
 import React, { useEffect, useRef } from "react";
 import L from "leaflet";
+import {
+  IconCar,
+  IconMap2,
+  IconMapPinPlus,
+  IconNavigation,
+  IconSearch,
+  IconTargetArrow,
+  IconTrash,
+  IconX,
+} from "@tabler/icons-react";
 
 export interface MapLocation {
   id: string;
@@ -85,6 +95,18 @@ const LEG_COLORS = [
   { stroke: "#14b8a6", outline: "#134e4a", name: "เขียวอมฟ้า (Leg 7)" },     // #7 -> #8: Teal
   { stroke: "#f43f5e", outline: "#4c0519", name: "แดงทับทิม (Leg 8)" },      // #8 -> #9: Rose-Red
 ];
+
+function tablerSvg(paths: string, size = 14) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-3px;margin-right:4px"><g>${paths}</g></svg>`;
+}
+
+const mapPinSvg = tablerSvg('<path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0"/>');
+const phoneSvg = tablerSvg('<path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2"/>');
+const pinPlusSvg = tablerSvg('<path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/><path d="M12.794 21.322a2 2 0 0 1 -2.207 -.422l-4.244 -4.243a8 8 0 1 1 13.59 -4.616"/><path d="M16 19h6"/><path d="M19 16v6"/>');
+const sparklesSvg = tablerSvg('<path d="M16 18a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2m0 -12a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2m-7 12a6 6 0 0 1 6 -6a6 6 0 0 1 -6 -6a6 6 0 0 1 -6 6a6 6 0 0 1 6 6"/>');
+const photoSvg = tablerSvg('<path d="M15 8h.01"/><path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12"/><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5"/><path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3"/>');
+const starSvg = tablerSvg('<path d="M12 17.75l-6.172 3.245l1.179 -6.873l-5 -4.867l6.9 -1l3.086 -6.253l3.086 6.253l6.9 1l-5 4.867l1.179 6.873l-6.158 -3.245"/>');
+const xSvg = tablerSvg('<path d="M18 6l-12 12"/><path d="M6 6l12 12"/>');
 
 function isThailandCoords(lat?: number, lng?: number): boolean {
   if (typeof lat !== "number" || typeof lng !== "number") return false;
@@ -307,7 +329,7 @@ export default function InteractiveMap({
 
                     // Add hover tooltip on leg to show "จุด #1 → #2"
                     dashed.bindTooltip(
-                      `<div style="font-family:'Nunito','Mitr',sans-serif; font-weight:900; font-size:11px; color:${legColor.stroke};">📍 เส้นทางช่วงจุดที่ #${legIndex + 1} ➔ #${legIndex + 2} (${distKm} กม.)</div>`,
+                      `<div style="font-family:'Nunito','Mitr',sans-serif; font-weight:900; font-size:11px; color:${legColor.stroke};">${mapPinSvg}เส้นทางช่วงจุดที่ #${legIndex + 1} ➔ #${legIndex + 2} (${distKm} กม.)</div>`,
                       { sticky: true, opacity: 0.95 }
                     );
 
@@ -377,11 +399,11 @@ export default function InteractiveMap({
       // Pin colors & size:
       // Pinned / Collection locations = Distinct Leather Amber (#d67940) with rank number (#1, #2, ...)
       // Selected location = Golden / prominent teardrop
-      // Unpinned locations = Original teardrop pin (#285185) with 📍 emoji
+      // Unpinned locations = Original teardrop pin (#285185) with a Tabler marker
       const size = isSelected ? 38 : isRecce ? 34 : 30;
       const bg = isSelected ? "#d67940" : isRecce ? "#d67940" : "#285185";
       const border = isSelected ? "#ffffff" : isRecce ? "#ffffff" : "#ffffff";
-      const badgeText = isRecce ? `#${recceIndex + 1}` : isSelected ? "★" : "📍";
+      const badgeText = isRecce ? `#${recceIndex + 1}` : isSelected ? starSvg : mapPinSvg;
 
       // Classic teardrop pin design with exact anchoring
       const pinHtml = `
@@ -449,9 +471,9 @@ export default function InteractiveMap({
             ${loc.name_th}
           </div>
           <div style="font-size: 11px; font-weight: 700; color: #475569; margin-bottom: 4px;">
-            📍 ${loc.province} ${districtLabel}
+            ${mapPinSvg} ${loc.province} ${districtLabel}
           </div>
-          ${loc.tel ? `<div style="font-size: 11px; font-weight: 800; color: #d97706; margin-bottom: 4px;">📞 ${loc.tel}</div>` : ""}
+          ${loc.tel ? `<div style="font-size: 11px; font-weight: 800; color: #d97706; margin-bottom: 4px;">${phoneSvg} ${loc.tel}</div>` : ""}
           <div style="font-size: 10px; font-family: monospace; color: #0284c7; font-weight: 700; margin-bottom: 8px;">
             GPS: ${lat.toFixed(4)}, ${lng.toFixed(4)}
           </div>
@@ -461,7 +483,7 @@ export default function InteractiveMap({
               type="button"
               style="
                 flex: 1;
-                padding: 6px 10px;
+                padding: 6px;
                 border-radius: 10px;
                 font-size: 11px;
                 font-weight: 900;
@@ -478,7 +500,7 @@ export default function InteractiveMap({
                 transition: all 0.1s ease;
               "
             >
-              ${isPinned ? "✕ ปลดหมุด" : "📌 + ปักหมุด"}
+              ${isPinned ? `${xSvg}` : `${pinPlusSvg}`}
             </button>
             ${
               onOpenRag
@@ -505,7 +527,7 @@ export default function InteractiveMap({
                   transition: all 0.1s ease;
                 "
               >
-                ✨ ข้อมูลกองถ่าย
+                ${sparklesSvg}ข้อมูลกองถ่าย
               </button>
             `
                 : ""
@@ -536,7 +558,7 @@ export default function InteractiveMap({
                   transition: all 0.1s ease;
                 "
               >
-                📸 รูปจริง
+                ${photoSvg}รูปจริง
               </button>
             `
                 : ""
@@ -640,12 +662,12 @@ export default function InteractiveMap({
       {/* Map Control Header - Travel Flatlay Theme */}
       <div className="bg-[#f0f5f8] px-3.5 py-2.5 border-b-2 border-[#285185] flex flex-wrap items-center justify-between gap-2 shrink-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="bg-[#285185] text-white rounded-lg px-2 py-0.5 text-xs font-black">
-            🗺️ Live Map
+          <span className="bg-[#285185] text-white rounded-lg px-2 py-0.5 text-xs font-black inline-flex items-center gap-1.5">
+            <IconMap2 size={14} /> Live Map
           </span>
           <span className="text-xs font-black text-[#1b3558]">
             {filterOnlyPinned
-              ? `📌 ${scoutingList.filter((l) => l.lat && l.lng).length} จุดที่ปักไว้`
+              ? <span className="inline-flex items-center gap-1"><IconMapPinPlus size={14} /> {scoutingList.filter((l) => l.lat && l.lng).length} จุดที่ปักไว้</span>
               : `${locations.filter((l) => l.lat && l.lng).length} หมุดพิกัด`}
           </span>
 
@@ -663,7 +685,10 @@ export default function InteractiveMap({
               }`}
               title={scoutingList.length === 0 ? "ยังไม่มีหมุดที่ปักไว้" : "สลับแสดงเฉพาะจุดที่ปักหมุด"}
             >
-              <span>{filterOnlyPinned ? "🗺️ แสดงทั้งหมด" : "📌 เฉพาะที่ปักหมุด"}</span>
+              <span className="inline-flex items-center gap-1.5">
+                {filterOnlyPinned ? <IconMap2 size={14} /> : <IconMapPinPlus size={14} />}
+                {filterOnlyPinned ? "แสดงทั้งหมด" : "เฉพาะที่ปักหมุด"}
+              </span>
               <span
                 className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
                   filterOnlyPinned ? "bg-white text-[#d67940]" : "bg-[#ccd9e2] text-[#1b3558]"
@@ -681,7 +706,7 @@ export default function InteractiveMap({
               className="text-xs px-2.5 py-1 rounded-xl font-black bg-white hover:bg-rose-50 border border-rose-300 text-rose-700 flex items-center gap-1 transition shadow-xs"
               title="ล้างหมุดสำรวจทั้งหมด"
             >
-              <span>🗑️ ล้าง</span>
+              <span className="inline-flex items-center gap-1"><IconTrash size={14} /> ล้าง</span>
             </button>
           )}
         </div>
@@ -692,7 +717,7 @@ export default function InteractiveMap({
             className="text-xs px-2.5 py-1 rounded-xl font-bold bg-white hover:bg-[#ccd9e2]/40 text-[#285185] border border-[#285185] shadow-xs transition"
             title="ซูมออกดูระยะห่างของหมุดทั้งหมด"
           >
-            🔍 รวมมุมมอง
+            <span className="inline-flex items-center gap-1.5"><IconSearch size={14} /> รวมมุมมอง</span>
           </button>
 
           {googleMapsUrl && (
@@ -702,7 +727,7 @@ export default function InteractiveMap({
               rel="noreferrer"
               className="text-xs px-2.5 py-1 rounded-xl font-black bg-[#d67940] hover:bg-[#c06530] text-white border border-[#a8521d] shadow-xs transition"
             >
-              🚀 นำทาง
+              <span className="inline-flex items-center gap-1.5"><IconNavigation size={14} /> นำทาง</span>
             </a>
           )}
         </div>
@@ -712,7 +737,7 @@ export default function InteractiveMap({
       {selectedLocation && (
         <div className="bg-[#fff7ed] px-3.5 py-2 border-b border-[#fed7aa] flex items-center justify-between text-xs shrink-0">
           <div className="flex items-center gap-1.5 truncate">
-            <span className="text-[#d67940] font-black shrink-0">🎯 เลือก:</span>
+            <span className="text-[#d67940] font-black shrink-0 inline-flex items-center gap-1"><IconTargetArrow size={14} /> เลือก:</span>
             <span className="font-black text-[#1b3558] truncate">
               {selectedLocation.name_th} ({selectedLocation.province})
             </span>
@@ -722,7 +747,7 @@ export default function InteractiveMap({
               onClick={() => onToggleScout(selectedLocation)}
               className="bg-[#285185] text-white text-[11px] px-2.5 py-0.5 rounded-lg font-black shrink-0 hover:bg-[#183354] transition"
             >
-              {scoutingList.some((x) => x.id === selectedLocation.id) ? "✓ ปักแล้ว" : "+ ปักหมุด"}
+              <span className="inline-flex items-center gap-1"><IconMapPinPlus size={13} /> {scoutingList.some((x) => x.id === selectedLocation.id) ? "ปักแล้ว" : "+ ปักหมุด"}</span>
             </button>
             {onDeselect && (
               <button
@@ -730,7 +755,7 @@ export default function InteractiveMap({
                 className="w-5 h-5 rounded-full bg-white hover:bg-rose-100 text-slate-500 hover:text-rose-700 flex items-center justify-center text-xs font-black transition cursor-pointer border border-slate-200"
                 title="ยกเลิกการเลือก"
               >
-                ✕
+                <IconX size={13} />
               </button>
             )}
           </div>
@@ -741,8 +766,8 @@ export default function InteractiveMap({
       {(filterOnlyPinned || isCollectionMode) && validRecce.length >= 1 && (
         <div className="bg-[#fff7ed] px-4 py-2 border-b border-[#fed7aa] flex items-center justify-between text-xs text-[#7c2d12] font-bold shrink-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="flex items-center gap-1">
-              🚗 <strong className="font-black">{isCollectionMode ? "เส้นทางในกล่อง:" : "เส้นทางวิ่งจริง:"}</strong> {validRecce.length} จุด
+              <span className="flex items-center gap-1">
+                <IconCar size={14} /> <strong className="font-black">{isCollectionMode ? "เส้นทางในกล่อง:" : "เส้นทางวิ่งจริง:"}</strong> {validRecce.length} จุด
             </span>
             {validRecce.length >= 2 && (
               <div className="flex items-center gap-2 flex-wrap">
@@ -788,7 +813,7 @@ export default function InteractiveMap({
                 onClick={onClearScout}
                 className="hover:underline text-rose-700 font-bold flex items-center gap-0.5"
               >
-                🗑️ ล้างหมุด
+                <span className="inline-flex items-center gap-1"><IconTrash size={14} /> ล้างหมุด</span>
               </button>
             )}
           </div>

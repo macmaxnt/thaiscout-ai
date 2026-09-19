@@ -9,6 +9,7 @@ import {
   ProvinceData,
 } from "@/data/provinces";
 import { MapPin, Search, X, ChevronDown, Check, Globe, Layers } from "lucide-react";
+import RegionIcon from "@/components/RegionIcon";
 
 interface ProvinceSelectorProps {
   value: string;
@@ -93,7 +94,7 @@ export default function ProvinceSelector({
       return allowAll ? "ทุกจังหวัด (ทั่วประเทศ)" : placeholder;
     }
     if (currentRegionObj) {
-      return `${currentRegionObj.icon} ${currentRegionObj.name}`;
+      return currentRegionObj.name;
     }
     return `${value}${currentProvinceObj ? ` (${currentProvinceObj.region.replace("ภาค", "")})` : ""}`;
   };
@@ -124,7 +125,10 @@ export default function ProvinceSelector({
               ? "text-rose-600"
               : "text-slate-400"
           }`} />
-          <span className="truncate font-black">{getDisplayText()}</span>
+          <span className="truncate font-black flex items-center gap-1.5">
+            {currentRegionObj && <RegionIcon name={currentRegionObj.icon} size={15} className="shrink-0" />}
+            {getDisplayText()}
+          </span>
         </div>
         <ChevronDown
           className={`w-4 h-4 text-slate-600 shrink-0 transition-transform ${

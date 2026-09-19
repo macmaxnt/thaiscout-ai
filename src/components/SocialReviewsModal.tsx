@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { X, ExternalLink, Star } from "lucide-react";
+import { IconPhoto, IconMap2, IconStar, IconBrandGoogleMaps } from "@tabler/icons-react";
 
 interface SocialReviewsModalProps {
   location: any;
@@ -62,7 +63,7 @@ export default function SocialReviewsModal({ location, onClose }: SocialReviewsM
         <div className="bg-gradient-to-r from-sky-50 via-slate-50 to-amber-50 border-b-2 border-[#285185] p-3.5 sm:px-6 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="bg-white border-2 border-[#285185] rounded-2xl p-2 text-xl shadow-[2px_2px_0px_#183354] flex items-center justify-center">
-              📸
+              <IconPhoto size={24} />
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
@@ -96,14 +97,14 @@ export default function SocialReviewsModal({ location, onClose }: SocialReviewsM
           <div className="bg-gradient-to-r from-sky-50 via-blue-50 to-indigo-50 border-2 border-[#0284c7] rounded-2xl p-3.5 sm:p-4 shadow-[3px_3px_0px_#0369a1] flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-3">
               <div className="bg-white p-2.5 rounded-xl border border-sky-200 text-2xl shadow-xs">
-                🗺️
+                <IconMap2 size={24} />
               </div>
               <div>
                 <h4 className="font-black text-sm text-slate-900 flex items-center gap-2">
                   Google Maps Verified Photos
                   {placesRating && (
                     <span className="text-xs font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
-                      ⭐ {placesRating.toFixed(1)}
+                      <IconStar size={13} fill="currentColor" /> {placesRating.toFixed(1)}
                     </span>
                   )}
                 </h4>
@@ -204,7 +205,7 @@ export default function SocialReviewsModal({ location, onClose }: SocialReviewsM
         {/* Modal Footer */}
         <div className="bg-slate-50 border-t border-slate-200 px-4 sm:px-6 py-3 flex items-center justify-between shrink-0">
           <div className="text-xs text-slate-500 font-bold flex items-center gap-1.5">
-            <span>🇹🇭 Google Maps Open Data Grounding</span>
+            <span className="inline-flex items-center gap-1.5"><IconBrandGoogleMaps size={14} /> Google Maps Open Data Grounding</span>
           </div>
 
           <button

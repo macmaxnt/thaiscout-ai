@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { Folder, FolderPlus, Trash2, MapPin, X, Eye, Edit2, Check, GripVertical, ChevronUp, ChevronDown } from "lucide-react";
+import { IconFolder, IconMapPin, IconBulb } from "@tabler/icons-react";
 
 export interface Collection {
   id: string;
@@ -287,7 +288,7 @@ export default function CollectionsModal({
                 <div className="flex items-center justify-between pb-3 border-b border-slate-200 flex-wrap gap-2">
                   <div>
                     <h3 className="text-base sm:text-lg font-black text-[#1b3558] flex items-center gap-2">
-                      <span>📁 {currentCollection.name}</span>
+                      <span className="inline-flex items-center gap-1.5"><IconFolder size={15} /> {currentCollection.name}</span>
                       <button
                         type="button"
                         onClick={(e) => handleStartRename(currentCollection, e)}
@@ -438,7 +439,7 @@ export default function CollectionsModal({
                                 )}
                               </h4>
                               <div className="flex items-center gap-2 text-[11px] font-bold text-slate-500 mt-0.5">
-                                <span className="text-[#0284c7]">📍 {loc.province}</span>
+                                <span className="text-[#0284c7] inline-flex items-center gap-1"><IconMapPin size={13} /> {loc.province}</span>
                                 <span>·</span>
                                 <span className="truncate">{loc.category || loc.sub_type || "สถานที่"}</span>
                               </div>
@@ -484,7 +485,7 @@ export default function CollectionsModal({
         {/* Modal Footer */}
         <div className="bg-[#f0f5f8] border-t-2 border-[#ccd9e2] px-5 py-3 flex items-center justify-between shrink-0">
           <span className="text-xs font-bold text-slate-500">
-            💡 ข้อมูลทุกกล่องและสถานที่ถูกบันทึกไว้ในเบราว์เซอร์ของคุณ (LocalStorage) เปิดใหม่ก็ยังอยู่
+            <span className="inline-flex items-center gap-1.5"><IconBulb size={14} /> ข้อมูลทุกกล่องและสถานที่ถูกบันทึกไว้ในเบราว์เซอร์ของคุณ (LocalStorage) เปิดใหม่ก็ยังอยู่</span>
           </span>
           <button
             onClick={onClose}

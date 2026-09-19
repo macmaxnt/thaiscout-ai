@@ -22,6 +22,19 @@ import {
   searchProvinces 
 } from "@/data/provinces";
 import { MockUser, getCurrentSession, setCurrentSession } from "@/utils/mockAuth";
+import RegionIcon from "@/components/RegionIcon";
+import {
+  IconBolt,
+  IconFolder,
+  IconShieldCheck,
+  IconSparkles,
+  IconVideo,
+  IconWorld,
+  IconPhoto,
+  IconX,
+  IconTrash,
+  IconBulb,
+} from "@tabler/icons-react";
 
 // Dynamic import for Leaflet map (client-only)
 const InteractiveMap = dynamic(() => import("@/components/InteractiveMap"), {
@@ -71,7 +84,7 @@ function HighlightBox({
         ref={textRef}
         className={isExpanded ? "" : "line-clamp-3 overflow-hidden"}
       >
-        <span className="text-[#d67940] font-black mr-1 text-[11px]">✨ ไฮไลท์:</span>
+        <span className="text-[#d67940] font-black mr-1 text-[11px] inline-flex items-center gap-1"><IconSparkles size={13} /> ไฮไลท์:</span>
         {text}
       </div>
       {(isClamped || isExpanded) && (
@@ -126,6 +139,7 @@ export default function Home() {
   const [cardDragOverIndex, setCardDragOverIndex] = useState<number | null>(null);
 
   const cardsTopRef = useRef<HTMLDivElement>(null);
+  const initialNationwideLoadRef = useRef(false);
 
   // Initialize session from Local Storage
   useEffect(() => {
@@ -305,15 +319,6 @@ export default function Home() {
     targetProv = selectedProvince,
     limitToFetch?: number
   ) => {
-    // If nationwide ('ทั้งหมด') and no search keyword, don't show all locations (keep clean initial workspace)
-    if (targetReg === "ทั้งหมด" && (!targetProv || targetProv === "all") && !targetBrief.trim()) {
-      setResults([]);
-      setTotalDbMatches(8628);
-      setGeminiAnalysis(null);
-      setSelectedLocation(null);
-      return;
-    }
-
     setLoading(true);
     setSelectedLocation(null);
 
@@ -366,10 +371,12 @@ export default function Home() {
     handleSearch(brief, selectedRegion, selectedProvince, nextLimit);
   };
 
-  // Initial load - keep clean when nationwide and no keyword
+  // Load nationwide locations automatically after the session is ready.
   useEffect(() => {
-    // Starts empty as requested ("หน้าค้นหาตอนเลือกทั่วประเทศไม่ต้องให้แสดงอะไรมา")
-  }, []);
+    if (!authInitialized || !currentUser || initialNationwideLoadRef.current) return;
+    initialNationwideLoadRef.current = true;
+    void handleSearch("", "ทั้งหมด", "all");
+  }, [authInitialized, currentUser]);
 
   useEffect(() => {
     try {
@@ -462,7 +469,7 @@ export default function Home() {
   return (
     <div className="flex flex-1 h-screen overflow-hidden relative">
 
-        {/* 🗂️ SIDEBAR (Drawer Style / Collapsible: Expands to 64-72, Collapses to Slim Icon Rail w-16) */}
+        {/* SIDEBAR (Drawer Style / Collapsible: Expands to 64-72, Collapses to Slim Icon Rail w-16) */}
         <aside
           className={`${
             isSidebarOpen ? "w-64 sm:w-72" : "w-16"
@@ -478,7 +485,7 @@ export default function Home() {
                 className="w-9 h-9 rounded-xl bg-[#d67940] flex items-center justify-center text-white font-black text-lg shadow-sm border border-white/20 cursor-pointer hover:scale-105 transition"
                 title="Travel Location"
               >
-                ⚡
+                <IconBolt size={21} stroke={2.5} />
               </div>
               {isSidebarOpen && (
                 <div>
@@ -576,7 +583,7 @@ export default function Home() {
               </button>
             </div>
 
-            {/* 📁 Collections Section */}
+            {/* Collections Section */}
             <div className="pt-2.5 border-t border-white/10">
               {isSidebarOpen ? (
                 <>
@@ -614,7 +621,7 @@ export default function Home() {
                           }`}
                         >
                           <div className="truncate flex items-center gap-2">
-                            <span>📁</span>
+                            <IconFolder className="w-3.5 h-3.5 shrink-0" />
                             <span className="truncate">{col.name}</span>
                           </div>
                           <span className="text-[11px] font-mono text-white bg-white/20 px-1.5 py-0.5 rounded-md">
@@ -642,7 +649,7 @@ export default function Home() {
             {isSidebarOpen && (
               <div className="p-3 rounded-2xl bg-[#183354]/70 border border-white/10 text-[11px] text-[#ccd9e2] leading-relaxed">
                 <div className="font-bold text-white flex items-center gap-1 mb-1">
-                  <span>🛡️</span> TAT Ground Truth 100%
+                  <IconShieldCheck className="w-3.5 h-3.5" /> TAT Ground Truth 100%
                 </div>
                 ฐานข้อมูล ททท. 8,628 พิกัดจริง ตรวจสอบระเบียบการถ่ายทำเรียบร้อย
               </div>
@@ -667,7 +674,7 @@ export default function Home() {
                     {currentUser?.name || "ผู้ใช้งาน"}
                   </div>
                   <div className="text-[10px] text-[#ccd9e2] font-mono truncate">
-                    🎬 Creator / กองถ่าย
+                    <span className="inline-flex items-center gap-1"><IconVideo className="w-3 h-3" /> Creator / กองถ่าย</span>
                   </div>
                 </div>
               )}
@@ -683,11 +690,11 @@ export default function Home() {
           </div>
         </aside>
 
-        {/* 💻 MAIN SCREEN: Split into 3 columns (Left 2 parts for Controls & Cards + Right 1 part for Fixed Map) */}
-        <main className="flex-1 flex flex-col lg:grid lg:grid-cols-3 h-full overflow-hidden relative">
+        {/* MAIN SCREEN: Map column is 10% wider than its previous one-third layout */}
+        <main className="flex-1 flex flex-col lg:grid lg:grid-cols-[63.33%_36.67%] h-full overflow-hidden relative">
           
           {/* === 2 PARTS LEFT: Search, Filters, Creative Brief & 3-Column Results Grid === */}
-          <div className={`lg:col-span-2 overflow-y-auto p-4 sm:p-6 space-y-4 border-r border-[#ccd9e2]/60 transition-all duration-200 ${
+          <div className={`overflow-y-auto p-4 sm:p-6 space-y-4 border-r border-[#ccd9e2]/60 transition-all duration-200 ${
             ragTargetLocation || socialModalLocation ? "blur-xs opacity-60 pointer-events-none" : ""
           }`}>
             
@@ -742,7 +749,7 @@ export default function Home() {
                     ) : (
                       <div className="flex items-center gap-2.5 flex-wrap">
                         <h1 className="text-2xl sm:text-3xl font-black text-[#1b3558] tracking-tight truncate">
-                          📁 {collections.find((c) => c.id === activeCollectionId)?.name || "กล่องคลัง"}
+                          <span className="inline-flex items-center gap-1.5"><IconFolder size={22} /> {collections.find((c) => c.id === activeCollectionId)?.name || "กล่องคลัง"}</span>
                         </h1>
                         <div className="flex items-center gap-1">
                           <button
@@ -802,7 +809,7 @@ export default function Home() {
               </div>
             </div>
 
-            {/* 🔍 Search Box or Pinned Filter Box (หน้าปักหมุดตัดช่องค้นหาออก เหลือเฉพาะตัวกรองภาค/จังหวัด) */}
+            {/* Search Box or Pinned Filter Box (หน้าปักหมุดตัดช่องค้นหาออก เหลือเฉพาะตัวกรองภาค/จังหวัด) */}
             <div className="bg-white border-2 border-[#285185] rounded-2xl p-4 sm:p-5 shadow-[4px_4px_0px_#183354] space-y-3">
               
               {/* Only show Search input in Discovery/Search mode */}
@@ -836,7 +843,7 @@ export default function Home() {
                           }}
                           className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 font-black text-xs"
                         >
-                          ✕
+                          <IconX size={13} />
                         </button>
                       )}
                     </div>
@@ -853,7 +860,7 @@ export default function Home() {
                 </>
               )}
 
-              {/* 🗺️ Level 1 Filter: Region Chips (ระดับบนสุดเป็นภาค) */}
+              {/* Level 1 Filter: Region Chips (ระดับบนสุดเป็นภาค) */}
               <div className="pt-2 border-t border-slate-100">
                 <div className="text-[11px] font-black text-slate-500 mb-1.5 flex items-center justify-between">
                   <span>เลือกดูรายภาค:</span>
@@ -868,7 +875,7 @@ export default function Home() {
                       }}
                       className="text-[#d67940] hover:underline font-bold text-[10px] cursor-pointer"
                     >
-                      ✕ ดูทุกภาค
+                    <span className="inline-flex items-center gap-1"><IconX size={12} /> ดูทุกภาค</span>
                     </button>
                   )}
                 </div>
@@ -889,7 +896,7 @@ export default function Home() {
                         : "bg-white text-slate-700 border-slate-200 hover:border-[#285185]"
                     }`}
                   >
-                    🌐 ทั่วประเทศ {filterOnlyPinned || activeTab === "scout" ? `(${scoutingList.length})` : "(77)"}
+                    <span className="inline-flex items-center gap-1.5"><IconWorld size={14} /> ทั่วประเทศ {filterOnlyPinned || activeTab === "scout" ? `(${scoutingList.length})` : "(77)"}</span>
                   </button>
 
                   {REGION_LIST.filter((r) => r.id !== "all").map((reg) => {
@@ -921,7 +928,7 @@ export default function Home() {
                             : "bg-white text-slate-700 border-slate-200 hover:border-[#285185]"
                         }`}
                       >
-                        <span>{reg.icon}</span>
+                        <RegionIcon name={reg.icon} size={14} />
                         <span>{regName.replace("ภาค", "")}</span>
                         <span className={`text-[10px] ${isRegActive ? "text-[#ccd9e2]" : "text-slate-400"}`}>
                           ({countDisplay})
@@ -932,7 +939,7 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* 📍 Level 2 Filter: Break down provinces under selected region (แตกจังหวัดออกมาของภาคนั้น) */}
+              {/* Level 2 Filter: Break down provinces under selected region (แตกจังหวัดออกมาของภาคนั้น) */}
               {selectedRegion !== "ทั้งหมด" && (
                 <div className="pt-2 border-t border-slate-100 bg-[#f0f5f8] p-3 rounded-xl border border-[#ccd9e2]">
                   <div className="flex items-center justify-between mb-1.5">
@@ -1062,20 +1069,20 @@ export default function Home() {
                 </div>
                 {geminiAnalysis.mood && (
                   <p className="text-xs text-slate-700 font-medium">
-                    🎬 <strong>Mood:</strong> {geminiAnalysis.mood}
+                    <IconVideo className="inline-block mr-1" size={14} /> <strong>Mood:</strong> {geminiAnalysis.mood}
                   </p>
                 )}
                 {geminiAnalysis.directorTip && (
                   <p className="text-xs text-slate-600 font-medium">
-                    💡 <strong>คำแนะนำกองถ่าย:</strong> {geminiAnalysis.directorTip}
+                    <IconBulb className="inline-block mr-1" size={14} /> <strong>คำแนะนำกองถ่าย:</strong> {geminiAnalysis.directorTip}
                   </p>
                 )}
               </div>
             )}
 
-            {/* 📊 RESULTS TABLE / 3-COLUMN CARD GRID (ทำเป็น 3 ช่องตามที่ขอ) */}
+            {/* RESULTS TABLE / 3-COLUMN CARD GRID (ทำเป็น 3 ช่องตามที่ขอ) */}
             {loading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5 animate-pulse">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-3.5 animate-pulse">
                 {[1, 2, 3, 4, 5, 6].map((n) => (
                   <div key={n} className="h-60 bg-white rounded-2xl border border-slate-200 p-4 space-y-3" />
                 ))}
@@ -1102,7 +1109,7 @@ export default function Home() {
             ) : (
               <>
                 <div ref={cardsTopRef} className="scroll-mt-4" />
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5 items-start">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-3.5 items-start">
                   {displayedLocations.map((loc, cardIdx) => {
                     const isSaved = scoutingList.some((x) => x.id === loc.id);
                     const isSelected = selectedLocation?.id === loc.id;
@@ -1170,16 +1177,16 @@ export default function Home() {
                           setCardDragOverIndex(null);
                         }}
                         onClick={() => handleSelectFromCard(loc)}
-                        className={`self-start h-fit rounded-2xl p-4 transition-all duration-150 cursor-pointer flex flex-col justify-between border-2 ${
+                        className={`self-start h-fit rounded-2xl p-4 transition-all duration-150 cursor-pointer flex flex-col justify-between border ${
                           isCardBeingDragged
                             ? "opacity-40 border-dashed border-[#d67940] scale-[0.98]"
                             : isCardTargetOver
                             ? "border-[#d67940] bg-[#fff7ed] shadow-lg -translate-y-1"
                             : isSelected
-                            ? "border-[#d67940] shadow-[4px_4px_0px_#a8521d] ring-2 ring-[#d67940]/20 scale-[1.01] bg-white"
+                            ? "border-[#d67940] shadow-[3px_3px_0px_#a8521d] ring-2 ring-[#d67940]/20 scale-[1.01] bg-white"
                             : isInAnyCollection && !activeCollectionId
-                            ? "border-[#d67940] bg-[#fffbf7] shadow-[2px_2px_0px_#d67940] hover:shadow-[4px_4px_0px_#d67940] hover:-translate-y-0.5"
-                            : "border-[#285185] bg-white shadow-[2px_2px_0px_#183354] hover:shadow-[4px_4px_0px_#183354] hover:-translate-y-0.5"
+                            ? "border-[#d67940] bg-[#fffbf7] shadow-[1px_1px_0px_#d67940] hover:shadow-[3px_3px_0px_#d67940] hover:-translate-y-0.5"
+                            : "border-[#285185] bg-white shadow-[1px_1px_0px_#183354] hover:shadow-[3px_3px_0px_#183354] hover:-translate-y-0.5"
                         }`}
                       >
                         {/* Top: Category, Order handle, and Pin Action / Collection Indicators */}
@@ -1255,7 +1262,7 @@ export default function Home() {
                                       className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-[#f07167]/15 text-[#b02a37] border border-[#f07167]/40 hover:bg-[#f07167]/25 transition flex items-center gap-1 cursor-pointer max-w-[120px] truncate shadow-2xs"
                                       title={`อยู่ในกล่องคลัง: ${col.name} (คลิกเพื่อเข้าสู่คลังนี้)`}
                                     >
-                                      <span>📁</span>
+                                      <IconFolder size={12} />
                                       <span className="truncate">{col.name}</span>
                                     </span>
                                   ))}
@@ -1292,7 +1299,7 @@ export default function Home() {
 
                           {/* Location Name (เด่น ชัดเจน ตัวใหญ่ สะดุดตา) */}
                           <h3 
-                            className="text-base sm:text-[17px] font-black text-[#1b3558] hover:text-[#d67940] transition-colors line-clamp-1 mb-1 tracking-tight" 
+                            className="text-base sm:text-[17px] font-black text-[#1b3558] hover:text-[#d67940] transition-colors line-clamp-2 leading-tight min-h-[2.5rem] mb-1 tracking-tight" 
                             title={loc.name_th}
                           >
                             {loc.name_th}
@@ -1314,37 +1321,37 @@ export default function Home() {
                           )}
 
                           {/* Coordinates */}
-                          <div className="text-[10px] font-mono text-slate-400 mb-1 flex items-center gap-1">
-                            <span className="font-bold text-slate-500">พิกัด GPS:</span>
+                          <div className="text-[9px] font-mono text-slate-400/80 mb-1 flex items-center gap-1">
+                            <span className="font-medium text-slate-400">พิกัด GPS:</span>
                             <span>{loc.lat ? `${loc.lat.toFixed(4)}, ${loc.lng?.toFixed(4)}` : "ระบุตามเขตพื้นที่"}</span>
                           </div>
                         </div>
 
                         {/* Bottom Actions */}
-                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-1 mt-auto">
+                        <div className="pt-2 border-t border-slate-100 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-1.5 mt-auto">
                           <button
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
                               setRagTargetLocation(loc);
                             }}
-                            className="text-[11px] font-black text-[#285185] hover:underline flex items-center gap-1"
+                            className="min-w-0 text-[10px] font-black text-[#285185] hover:underline flex items-center gap-0.5 whitespace-nowrap"
                           >
                             <Sparkles className="w-3 h-3 text-[#d67940]" />
-                            <span>ข้อมูลกองถ่าย</span>
+                            <span className="truncate">ข้อมูลกองถ่าย</span>
                           </button>
 
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1 shrink-0">
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setSocialModalLocation(loc);
                               }}
-                              className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold"
+                              className="px-1.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold whitespace-nowrap"
                               title="ดูรูปภาพจริงจาก Google Maps"
                             >
-                              📷 รูปภาพ
+                              <span className="inline-flex items-center gap-1"><IconPhoto size={13} /> รูปภาพ</span>
                             </button>
 
                             {activeCollectionId ? (
@@ -1354,10 +1361,10 @@ export default function Home() {
                                   e.stopPropagation();
                                   handleRemoveLocationFromCollection(activeCollectionId, loc.id);
                                 }}
-                                className="px-2 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[10px] font-bold cursor-pointer transition"
+                                className="px-1.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[10px] font-bold cursor-pointer transition whitespace-nowrap"
                                 title="ลบออกจากกล่องคลังนี้"
                               >
-                                ✕ ลบออกจากกล่อง
+                                <span className="inline-flex items-center gap-1"><IconTrash size={13} /> ลบออกจากกล่อง</span>
                               </button>
                             ) : (
                               <button
@@ -1366,7 +1373,7 @@ export default function Home() {
                                   e.stopPropagation();
                                   setAddToCollectionTarget(loc);
                                 }}
-                                className="px-2 py-1 rounded-lg bg-[#ccd9e2]/60 hover:bg-[#ccd9e2] text-[#1b3558] text-[10px] font-bold cursor-pointer transition"
+                                className="px-1.5 py-1 rounded-lg bg-[#ccd9e2]/60 hover:bg-[#ccd9e2] text-[#1b3558] text-[10px] font-bold cursor-pointer transition whitespace-nowrap"
                                 title="จัดเก็บลงคลัง"
                               >
                                 + เข้าคลัง
@@ -1397,8 +1404,8 @@ export default function Home() {
 
           </div>
 
-          {/* === 1 PART RIGHT: Fixed Map (1 ส่วนแผนที่ ฟิกตำแหน่งไว้ด้านขวา แบบกลมกลืนธีม) === */}
-          <div className={`lg:col-span-1 h-[460px] lg:h-full bg-[#f8fafc] p-3 sm:p-4 flex flex-col relative shrink-0 transition-all duration-200 ${
+          {/* === RIGHT: Fixed Map (ขยายกว้างขึ้น 10% จากสัดส่วนเดิม) === */}
+          <div className={`h-[460px] lg:h-full bg-[#f8fafc] p-3 sm:p-4 flex flex-col relative shrink-0 transition-all duration-200 ${
             ragTargetLocation || socialModalLocation ? "blur-xs opacity-60 pointer-events-none" : ""
           }`}>
             <div className="h-full w-full rounded-2xl overflow-hidden border-2 border-[#285185] shadow-[4px_4px_0px_#183354] flex flex-col bg-white">
@@ -1425,7 +1432,7 @@ export default function Home() {
 
         </main>
 
-      {/* 🎙️ AI RAG Dossier Modal */}
+      {/* AI RAG Dossier Modal */}
       {ragTargetLocation && (
         <RagModal
           location={ragTargetLocation}
@@ -1436,7 +1443,7 @@ export default function Home() {
         />
       )}
 
-      {/* 📸 Google Maps Place Photos Modal */}
+      {/* Google Maps Place Photos Modal */}
       {socialModalLocation && (
         <SocialReviewsModal
           location={socialModalLocation}
@@ -1444,7 +1451,7 @@ export default function Home() {
         />
       )}
 
-      {/* 📁 Collections Modal */}
+      {/* Collections Modal */}
       <CollectionsModal
         isOpen={isCollectionsModalOpen}
         onClose={() => setIsCollectionsModalOpen(false)}
@@ -1468,7 +1475,7 @@ export default function Home() {
         }}
       />
 
-      {/* 📥 Add To Collection Modal */}
+      {/* Add To Collection Modal */}
       {addToCollectionTarget && (
         <AddToCollectionModal
           isOpen={!!addToCollectionTarget}

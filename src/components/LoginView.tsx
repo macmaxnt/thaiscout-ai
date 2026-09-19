@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { UserPlus, LogIn, ShieldCheck, ChevronRight, Sparkles } from "lucide-react";
+import { IconBolt, IconAlertTriangle } from "@tabler/icons-react";
 import { MockUser, getMockUsers, registerMockUser, authenticateMockUser } from "@/utils/mockAuth";
 
 interface LoginViewProps {
@@ -73,7 +74,7 @@ export default function LoginView({ onLogin }: LoginViewProps) {
         {/* Brand Header */}
         <div className="text-center mb-6">
           <div className="w-12 h-12 rounded-2xl bg-[#d67940] border-2 border-white/20 flex items-center justify-center text-white shadow-[3px_3px_0px_#a8521d] font-black text-2xl mx-auto mb-3">
-            ⚡
+            <IconBolt size={25} stroke={2.5} />
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-[#1b3558] tracking-tight">
             Travel Location
@@ -113,7 +114,7 @@ export default function LoginView({ onLogin }: LoginViewProps) {
 
         {error && (
           <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold">
-            ⚠️ {error}
+            <span className="inline-flex items-center gap-1.5"><IconAlertTriangle size={14} /> {error}</span>
           </div>
         )}
 

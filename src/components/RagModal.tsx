@@ -5,6 +5,20 @@ import {
   Sparkles, X, Camera, Truck, ShieldAlert, Send, 
   HelpCircle, CheckCircle2, AlertTriangle, FileText, Phone, Compass
 } from "lucide-react";
+import {
+  IconAlertTriangle,
+  IconBook2,
+  IconBuildingSkyscraper,
+  IconDrone,
+  IconMapPinPlus,
+  IconMessageCircle,
+  IconPalette,
+  IconSearch,
+  IconSun,
+  IconTargetArrow,
+  IconVolume,
+  IconBolt,
+} from "@tabler/icons-react";
 
 interface RagModalProps {
   location: any;
@@ -75,9 +89,9 @@ export default function RagModal({
   };
 
   const quickQuestions = [
-    "🚁 บินโดรนถ่ายมุมสูงได้ไหม มีขั้นตอนยังไง?",
-    "🚐 รถตู้กองถ่ายและรถปั่นไฟเข้าถึงจุดถ่ายทำได้ไหม?",
-    "💰 เสียค่าธรรมเนียมขอถ่ายทำเท่าไหร่ ติดต่อใคร?",
+    "บินโดรนถ่ายมุมสูงได้ไหม มีขั้นตอนยังไง?",
+    "รถตู้กองถ่ายและรถปั่นไฟเข้าถึงจุดถ่ายทำได้ไหม?",
+    "เสียค่าธรรมเนียมขอถ่ายทำเท่าไหร่ ติดต่อใคร?",
   ];
 
   return (
@@ -88,7 +102,7 @@ export default function RagModal({
         <div className="bg-[#f0f5f8] border-b-2 border-[#285185] p-4 sm:px-6 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="bg-[#ccd9e2] border-2 border-[#285185] rounded-xl p-2 text-xl shadow-[2px_2px_0px_#183354]">
-              ⚡
+              <IconBolt size={24} stroke={2.5} />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -116,7 +130,10 @@ export default function RagModal({
                     : "bg-[#d67940] text-white border-[#a8521d] shadow-xs hover:bg-[#c06530]"
                 }`}
               >
-                {isPinned ? "✕ ปลดหมุด" : "📌 + ปักหมุด"}
+                <span className="inline-flex items-center gap-1.5">
+                  {isPinned ? <IconMapPinPlus size={14} /> : <IconMapPinPlus size={14} />}
+                  {isPinned ? "ปลดหมุด" : "+ ปักหมุด"}
+                </span>
               </button>
             )}
 
@@ -144,9 +161,9 @@ export default function RagModal({
             </div>
           ) : dossier ? (
             <>
-              {/* ⚠️ ข้อ 3: แสดงชัดว่าส่วนไหนเป็นข้อมูลจริง / ส่วนไหน AI วิเคราะห์ */}
+              {/* ข้อ 3: แสดงชัดว่าส่วนไหนเป็นข้อมูลจริง / ส่วนไหน AI วิเคราะห์ */}
               <div className="bg-amber-50 border-2 border-amber-300 rounded-[16px] p-3 shadow-[2px_2px_0px_#d97706] flex items-start gap-2.5">
-                <span className="text-base shrink-0">🔍</span>
+                <IconSearch size={18} className="shrink-0" />
                 <div className="text-[11px] font-bold text-amber-900 leading-relaxed">
                   <span className="font-black">แหล่งข้อมูลในหน้านี้มี 2 ประเภท:</span>
                   <div className="mt-1.5 space-y-1">
@@ -162,7 +179,7 @@ export default function RagModal({
                 </div>
               </div>
 
-              {/* 📄 Full Original Description from TAT (Span full width) */}
+              {/* Full Original Description from TAT (Span full width) */}
               {location.detail && (
                 <div className="bg-white border-2 border-[#ccd9e2] rounded-[20px] p-4 shadow-sm">
                   <div className="flex items-center justify-between mb-2 text-[#1b3558] font-black text-sm">
@@ -179,7 +196,7 @@ export default function RagModal({
                   </p>
                   {location.activity && (
                     <p className="text-xs text-[#1b3558] font-bold mt-2">
-                      🎯 กิจกรรมที่ ททท. แนะนำ: {location.activity}
+                      <span className="inline-flex items-center gap-1"><IconTargetArrow size={14} /> กิจกรรมที่ ททท. แนะนำ: {location.activity}</span>
                     </p>
                   )}
                 </div>
@@ -188,7 +205,7 @@ export default function RagModal({
               {/* 2-Column Grid for Dossier Sections (กางออกด้านข้าง ไม่อึดอัด) */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 
-                {/* 🎬 1. Cinematic & Lighting Analysis */}
+                {/* 1. Cinematic & Lighting Analysis */}
                 <div className="bg-white border-2 border-[#285185] rounded-[20px] p-4 shadow-[3px_3px_0px_#183354] flex flex-col justify-between">
                   <div>
                     <div className="flex items-center gap-2 mb-2 text-[#1b3558] font-black text-sm">
@@ -197,19 +214,19 @@ export default function RagModal({
                     </div>
                     <div className="space-y-2 text-xs font-medium text-slate-700">
                       <div className="bg-[#f0f5f8] p-2.5 rounded-xl border border-[#ccd9e2]">
-                        <strong className="text-[#285185]">☀️ แสงที่แนะนำ:</strong> {dossier.cinematicAnalysis.lightingRecommendation}
+                        <strong className="text-[#285185] inline-flex items-center gap-1"><IconSun size={14} /> แสงที่แนะนำ:</strong> {dossier.cinematicAnalysis.lightingRecommendation}
                       </div>
                       <div className="p-2">
-                        <strong className="text-slate-900">🎨 มิติภาพ:</strong> {dossier.cinematicAnalysis.visualAesthetic}
+                        <strong className="text-slate-900 inline-flex items-center gap-1"><IconPalette size={14} /> มิติภาพ:</strong> {dossier.cinematicAnalysis.visualAesthetic}
                       </div>
                     </div>
                   </div>
                   <div className="p-2 text-[#7c2d12] bg-[#fff7ed] rounded-xl border border-[#fed7aa] text-xs font-medium mt-2">
-                    <strong>🔊 สภาพเสียงในกอง:</strong> {dossier.cinematicAnalysis.soundEnvironment}
+                    <strong className="inline-flex items-center gap-1"><IconVolume size={14} /> สภาพเสียงในกอง:</strong> {dossier.cinematicAnalysis.soundEnvironment}
                   </div>
                 </div>
 
-                {/* 🚐 2. Logistics & Gear Access */}
+                {/* 2. Logistics & Gear Access */}
                 <div className="bg-white border-2 border-[#d67940] rounded-[20px] p-4 shadow-[3px_3px_0px_#a8521d] flex flex-col justify-between">
                   <div>
                     <div className="flex items-center gap-2 mb-2 text-[#7c2d12] font-black text-sm">
@@ -234,7 +251,7 @@ export default function RagModal({
 
               </div>
 
-              {/* 🔒 3. Permit & Safe Refusal (Span Full Width) */}
+              {/* 3. Permit & Safe Refusal (Span Full Width) */}
               <div className="bg-[#fbf6f6] border-2 border-[#6f4849] rounded-[20px] p-4 shadow-[3px_3px_0px_#4d2f30]">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2 text-[#4a2829] font-black text-sm">
@@ -248,19 +265,19 @@ export default function RagModal({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs font-medium text-slate-800">
                   <div className="space-y-2">
                     <p className="bg-white p-2.5 rounded-xl border border-[#6f4849]/20">
-                      <strong>🏛️ หน่วยงานกำกับดูแล:</strong> {dossier.permitAndSafety.governingBody}
+                      <strong className="inline-flex items-center gap-1"><IconBuildingSkyscraper size={14} /> หน่วยงานกำกับดูแล:</strong> {dossier.permitAndSafety.governingBody}
                     </p>
                     <p className="bg-white p-2.5 rounded-xl border border-[#6f4849]/20">
-                      <strong>🚁 ระเบียบโดรน:</strong> {dossier.permitAndSafety.droneNotice}
+                      <strong className="inline-flex items-center gap-1"><IconDrone size={14} /> ระเบียบโดรน:</strong> {dossier.permitAndSafety.droneNotice}
                     </p>
                   </div>
                   <div className="bg-[#fdf3eb] border border-[#fcd9bd] p-3 rounded-xl text-[#7c2d12] text-[11px] font-bold flex flex-col justify-center">
-                    <div>⚠️ <strong>กฎ Safe Refusal:</strong> {dossier.permitAndSafety.safeRefusalRule}</div>
+                    <div><IconAlertTriangle size={14} className="inline-block mr-1" /> <strong>กฎ Safe Refusal:</strong> {dossier.permitAndSafety.safeRefusalRule}</div>
                   </div>
                 </div>
               </div>
 
-              {/* 💬 4. Interactive Q&A Assistant */}
+              {/* 4. Interactive Q&A Assistant */}
               <div className="bg-white border-2 border-[#285185] rounded-[20px] p-4 shadow-[3px_3px_0px_#183354]">
                 <div className="flex items-center gap-2 mb-2 text-[#1b3558] font-black text-sm">
                   <HelpCircle className="w-4 h-4 text-[#285185]" />
@@ -276,7 +293,10 @@ export default function RagModal({
                       disabled={qaLoading}
                       className="text-[11px] px-2.5 py-1 rounded-lg bg-[#f0f5f8] hover:bg-[#ccd9e2] text-[#1b3558] border border-[#ccd9e2] font-bold transition cursor-pointer text-left"
                     >
-                      {q}
+                      <span className="inline-flex items-center gap-1.5">
+                        {idx === 0 ? <IconDrone size={14} /> : idx === 1 ? <Truck className="w-3.5 h-3.5" /> : <IconBuildingSkyscraper size={14} />}
+                        {q}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -307,13 +327,13 @@ export default function RagModal({
                     {qaList.map((item, idx) => (
                       <div key={idx} className="space-y-1.5 text-xs">
                         <div className="font-black text-[#1b3558] bg-[#f0f5f8] p-2 rounded-lg border border-[#ccd9e2]">
-                          ❓ {item.q}
+                          <span className="inline-flex items-center gap-1"><IconMessageCircle size={14} /> {item.q}</span>
                         </div>
                         <div className="bg-white p-3 rounded-xl border border-slate-200 whitespace-pre-line text-slate-800 leading-relaxed font-medium shadow-xs">
                           {item.a}
                           {item.citation && (
                             <div className="mt-2 pt-2 border-t border-slate-200 text-[10px] font-mono text-slate-500 flex items-center justify-between">
-                              <span>📚 แหล่งข้อมูล: {item.citation.source}</span>
+                              <span className="inline-flex items-center gap-1"><IconBook2 size={13} /> แหล่งข้อมูล: {item.citation.source}</span>
                               <span className="font-bold text-[#285185]">ID: #{item.citation.corpusId}</span>
                             </div>
                           )}
