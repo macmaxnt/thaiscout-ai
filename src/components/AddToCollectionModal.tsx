@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Folder, FolderPlus, Check, X } from "lucide-react";
 import { Collection } from "./CollectionsModal";
 
@@ -26,6 +26,22 @@ export default function AddToCollectionModal({
   const [newColName, setNewColName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
+  useEffect(() => {
+    if (!isOpen || !location) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, location, onClose]);
+
   if (!isOpen || !location) return null;
 
   const isMultiple = Array.isArray(location);
@@ -48,8 +64,14 @@ export default function AddToCollectionModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200"
+      onMouseDown={(event) => event.target === event.currentTarget && onClose()}
+    >
       <div 
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="add-to-collection-title"
         className="bg-white border-[3px] border-[#285185] rounded-[22px] shadow-[6px_6px_0px_#183354] w-full max-w-md flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
@@ -58,7 +80,7 @@ export default function AddToCollectionModal({
           <div className="flex items-center gap-2">
             <Folder className="w-5 h-5 text-[#285185]" />
             <div>
-              <h3 className="text-sm sm:text-base font-black text-[#1b3558]">
+              <h3 id="add-to-collection-title" className="text-sm sm:text-base font-black text-[#1b3558]">
                 {isMultiple ? "บันทึกทั้งหมดเข้าคอลเลกชัน" : "บันทึกเข้าคอลเลกชัน"}
               </h3>
               <p className="text-[11px] font-bold text-slate-500 truncate max-w-[260px]">
@@ -69,8 +91,10 @@ export default function AddToCollectionModal({
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-200 hover:text-slate-800 transition"
+            aria-label="ปิดหน้าต่างบันทึกเข้าคอลเลกชัน"
+            className="p-2 rounded-lg text-slate-400 hover:bg-slate-200 hover:text-slate-800 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#285185]/30 focus-visible:ring-offset-2"
           >
             <X className="w-4 h-4" />
           </button>
@@ -161,8 +185,9 @@ export default function AddToCollectionModal({
         {/* Footer */}
         <div className="bg-[#f0f5f8] border-t-2 border-[#ccd9e2] px-4 py-3 flex justify-end">
           <button
+            type="button"
             onClick={onClose}
-            className="btn text-xs px-4 py-1.5 rounded-xl font-black bg-[#285185] text-white hover:bg-[#1b3558]"
+            className="text-xs px-4 py-2 rounded-lg font-black bg-[#285185] text-white hover:bg-[#1b3558] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#285185]/30 focus-visible:ring-offset-2"
           >
             เสร็จสิ้น
           </button>

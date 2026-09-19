@@ -63,6 +63,22 @@ export default function CollectionsModal({
   const [editingColId, setEditingColId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
 
+  React.useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const currentCollection = collections.find((c) => c.id === selectedColId);
@@ -92,8 +108,14 @@ export default function CollectionsModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200"
+      onMouseDown={(event) => event.target === event.currentTarget && onClose()}
+    >
       <div 
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="collections-modal-title"
         className="bg-white border-[3px] border-[#285185] rounded-[24px] shadow-[6px_6px_0px_#183354] w-full max-w-4xl max-h-[88vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
@@ -104,7 +126,7 @@ export default function CollectionsModal({
               <Folder className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg sm:text-xl font-black text-[#1b3558] flex items-center gap-2">
+              <h2 id="collections-modal-title" className="text-lg sm:text-xl font-black text-[#1b3558] flex items-center gap-2">
                 คลังเซฟโลเคชัน (Collections)
                 <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-[#ccd9e2] text-[#1b3558]">
                   {collections.length} กล่อง
@@ -116,8 +138,10 @@ export default function CollectionsModal({
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition"
+            aria-label="ปิดหน้าต่างคลังเซฟโลเคชัน"
+            className="p-2 rounded-lg text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#285185]/30 focus-visible:ring-offset-2"
           >
             <X className="w-5 h-5" />
           </button>
@@ -488,8 +512,9 @@ export default function CollectionsModal({
             <span className="inline-flex items-center gap-1.5"><IconBulb size={14} /> ข้อมูลทุกกล่องและสถานที่ถูกบันทึกไว้ในเบราว์เซอร์ของคุณ (LocalStorage) เปิดใหม่ก็ยังอยู่</span>
           </span>
           <button
+            type="button"
             onClick={onClose}
-            className="btn text-xs px-4 py-1.5 rounded-xl font-black bg-white border-2 border-slate-300 text-slate-700 hover:bg-slate-100"
+            className="text-xs px-4 py-2 rounded-lg font-black bg-white border border-[#b9cede] text-[#285185] hover:bg-[#eaf2f7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#285185]/30 focus-visible:ring-offset-2"
           >
             ปิดหน้าต่าง
           </button>
