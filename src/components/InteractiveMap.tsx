@@ -100,6 +100,16 @@ function tablerSvg(paths: string, size = 14) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-3px;margin-right:4px"><g>${paths}</g></svg>`;
 }
 
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;",
+  }[character] || character));
+}
+
 const mapPinSvg = tablerSvg('<path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0"/>');
 const phoneSvg = tablerSvg('<path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2"/>');
 const pinPlusSvg = tablerSvg('<path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/><path d="M12.794 21.322a2 2 0 0 1 -2.207 -.422l-4.244 -4.243a8 8 0 1 1 13.59 -4.616"/><path d="M16 19h6"/><path d="M19 16v6"/>');
@@ -395,6 +405,8 @@ export default function InteractiveMap({
         ? locIndex 
         : scoutingList.findIndex((x) => x.id === loc.id);
       const isRecce = isCollectionMode ? true : recceIndex !== -1;
+      const safeLocationName = escapeHtml(loc.name_th);
+      const safeProvinceName = escapeHtml(loc.province);
 
       // Pin colors & size:
       // Pinned / Collection locations = Distinct Leather Amber (#d67940) with rank number (#1, #2, ...)
@@ -420,7 +432,7 @@ export default function InteractiveMap({
           justify-content: center;
           cursor: pointer;
           transition: transform 0.15s ease;
-        ">
+        " role="button" tabindex="0" aria-label="เปิดรายละเอียด ${safeLocationName} ที่จังหวัด${safeProvinceName}">
           <span style="
             transform: rotate(45deg);
             color: #ffffff;
@@ -604,6 +616,18 @@ export default function InteractiveMap({
 
       layer.addLayer(marker);
 
+      const markerElement = marker.getElement()?.querySelector<HTMLElement>('[role="button"]') || marker.getElement();
+      if (markerElement) {
+        const handleMarkerKeyDown = (event: KeyboardEvent) => {
+          if (event.key !== "Enter" && event.key !== " ") return;
+          event.preventDefault();
+          onSelectLocation(loc);
+          marker.openPopup();
+        };
+        markerElement.addEventListener("keydown", handleMarkerKeyDown);
+        marker.once("remove", () => markerElement.removeEventListener("keydown", handleMarkerKeyDown));
+      }
+
       if (isSelected) {
         marker.openPopup();
       }
@@ -658,9 +682,9 @@ export default function InteractiveMap({
   const totalDistance = calculateTotalDistance(scoutingList);
 
   return (
-    <div className="bg-white flex flex-col h-full w-full overflow-hidden">
+    <div className="bg-white flex flex-col h-full w-full overflow-hidden" role="region" aria-label="แผนที่สถานที่ถ่ายทำ">
       {/* Map Control Header - Travel Flatlay Theme */}
-      <div className="bg-[#f0f5f8] px-3.5 py-2.5 border-b-2 border-[#285185] flex flex-wrap items-center justify-between gap-2 shrink-0">
+      <div className="bg-[#f0f5f8] px-3.5 py-2 border-b border-[#285185]/70 flex flex-wrap items-center justify-between gap-2 shrink-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="bg-[#285185] text-white rounded-lg px-2 py-0.5 text-xs font-black inline-flex items-center gap-1.5">
             <IconMap2 size={14} /> Live Map
@@ -735,7 +759,7 @@ export default function InteractiveMap({
 
       {/* Selected Location Pill */}
       {selectedLocation && (
-        <div className="bg-[#fff7ed] px-3.5 py-2 border-b border-[#fed7aa] flex items-center justify-between text-xs shrink-0">
+        <div className="bg-[#fff7ed] px-3.5 py-2 border-b border-l-4 border-l-[#d67940] border-[#fed7aa] flex items-center justify-between text-xs shrink-0 shadow-sm">
           <div className="flex items-center gap-1.5 truncate">
             <span className="text-[#d67940] font-black shrink-0 inline-flex items-center gap-1"><IconTargetArrow size={14} /> เลือก:</span>
             <span className="font-black text-[#1b3558] truncate">
@@ -745,7 +769,7 @@ export default function InteractiveMap({
           <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={() => onToggleScout(selectedLocation)}
-              className="bg-[#285185] text-white text-[11px] px-2.5 py-0.5 rounded-lg font-black shrink-0 hover:bg-[#183354] transition"
+              className="bg-[#285185] text-white text-[11px] px-2.5 py-1 rounded-lg font-black shrink-0 hover:bg-[#183354] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d67940]"
             >
               <span className="inline-flex items-center gap-1"><IconMapPinPlus size={13} /> {scoutingList.some((x) => x.id === selectedLocation.id) ? "ปักแล้ว" : "+ ปักหมุด"}</span>
             </button>
