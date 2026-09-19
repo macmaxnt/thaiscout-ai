@@ -168,7 +168,7 @@ User: [บรีฟของผู้ใช้]
 | **AI Task** | Semantic Matching + Ranking | Domain Q&A + Analysis |
 | **Output** | รายการสถานที่ + Score + Highlights | คำแนะนำเชิงลึก + Citation |
 | **Guardrail** | ห้ามสร้างสถานที่ปลอม | ห้ามกุตัวเลข → redirect ไปเบอร์จริง |
-| **Model** | Gemini 1.5 Flash | Gemini 1.5 Flash |
+| **Model** | Gemini 3.5 Flash Lite (fallback: 2.5 Flash Lite → 2.5 Flash) |
 
 ---
 
