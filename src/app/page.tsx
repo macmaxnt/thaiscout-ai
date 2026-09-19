@@ -37,6 +37,8 @@ export default function Home() {
   const [ragTargetLocation, setRagTargetLocation] = useState<any | null>(null);
   const [currentMode, setCurrentMode] = useState<"scout" | "host">("scout");
   const [activeTab, setActiveTab] = useState<"search" | "scout">("search");
+  const [totalDbMatches, setTotalDbMatches] = useState<number>(8628);
+  const [currentLimit, setCurrentLimit] = useState<number>(400);
   const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
   const [customLocations, setCustomLocations] = useState<any[]>([
     {
@@ -48,10 +50,10 @@ export default function Home() {
       category: "บ้าน & เรือนไทย",
       lat: 14.3532,
       lng: 100.5684,
-      tel: "081-999-1234 (คุณสมชาย)",
+      tel: "081-999-1234",
       email: "contact@ayutthayavintage.com",
       facebook: "facebook.com/AyutthayaVintageHouse",
-      hilight: "✨ สถาปัตยกรรมไม้สักทองโบราณริมแม่น้ำเจ้าพระยา แสงเช้า-เย็นสะท้อนผิวน้ำสวยมาก",
+      hilight: "สถาปัตยกรรมไม้สักทองโบราณริมแม่น้ำเจ้าพระยา แสงเช้า-เย็นสะท้อนผิวน้ำสวยมาก",
       detail: "เรือนไทยหมู่โบราณ ใต้ถุนโล่ง ลานกว้างริมน้ำ มีท่าเรือส่วนตัว เหมาะกับกองถ่ายละครพีเรียด ซีนดราม่า และมิวสิควิดีโอ พร้อมห้องแต่งตัวติดแอร์",
       isCustomHost: true,
       productionSpecs: {
@@ -59,32 +61,28 @@ export default function Home() {
         power: "ไฟบ้าน 30A พร้อมจุดต่อไฟ 3 เฟสริมน้ำ",
         parking: "ลานดินกว้าง จอดรถตู้ 8 คัน รถปั่นไฟ 1 คัน",
         dronePolicy: "อนุญาตบินโดรนถ่ายผิวน้ำและตัวเรือน",
-        email: "contact@ayutthayavintage.com",
-        facebook: "facebook.com/AyutthayaVintageHouse",
       },
     },
     {
       id: "host_default_2",
       name_th: "โกดังเก่าดิบสไตล์ Industrial (เจ้าของโดยตรง)",
-      name_en: "Rustic Industrial Warehouse",
+      name_en: "Raw Industrial Warehouse",
       province: "สมุทรปราการ",
       district: "พระประแดง",
       category: "โกดัง & โรงงานเก่า",
       lat: 13.6580,
       lng: 100.5340,
-      tel: "089-888-5678 (คุณมานพ)",
+      tel: "089-888-5678",
       email: "production@rawwarehouse-sp.com",
       facebook: "facebook.com/RawWarehouseStudio",
-      hilight: "🔥 กำแพงอิฐเปลือย โครงสร้างเหล็กดิบ แสงส่องทะลุหน้าต่างกระจก เหมาะกับซีนแอ็กชัน",
+      hilight: "กำแพงอิฐเปลือย โครงสร้างเหล็กดิบ แสงส่องทะลุหน้าต่างกระจก เหมาะกับซีนแอ็กชัน",
       detail: "โกดังริมแม่น้ำพื้นที่ 1,200 ตร.ม. โปร่ง ไร้เสากลาง รองรับการแขวนไฟ Rigging และมุมกล้อง Top View เหมาะกับโฆษณาและ MV แฟชั่น",
       isCustomHost: true,
       productionSpecs: {
         rate: "22,000 บาท/คิว (12 ชม.)",
         power: "ไฟฟ้าอุตสาหกรรม 100A รองรับไฟสตูดิโอขนาดใหญ่",
-        parking: "ลานคอนกรีตขนาดใหญ่ จอดรถเทรลเลอร์และรถกองถ่ายได้กว่า 20 คัน",
+        parking: "ลานคอนกรีต จอดรถเทรลเลอร์และรถกองถ่าย 20 คัน",
         dronePolicy: "บินโดรนภายในโกดังเพดานสูง 10 เมตรได้",
-        email: "production@rawwarehouse-sp.com",
-        facebook: "facebook.com/RawWarehouseStudio",
       },
     },
   ]);
@@ -118,10 +116,11 @@ export default function Home() {
     { title: "🌊 ริมโขงสโลว์ไลฟ์", text: "ถนนคนเดินริมแม่น้ำโขง บ้านไม้โบราณ หมอกยามเช้า", prov: "เลย" },
   ];
 
-  const handleSearch = async (targetBrief = brief, targetProv = province) => {
+  const handleSearch = async (targetBrief = brief, targetProv = province, limitToFetch = 400) => {
     setLoading(true);
-    setMapPinSelectedId(null);
-    setFilterOnlyPinned(false);
+    // When scouting/searching, clear active selection so the map shows the entire overview
+    setSelectedLocation(null);
+
     // Auto-detect province if brief contains province name/alias
     let provToSend = targetProv;
     if (targetProv === "all") {
@@ -135,20 +134,32 @@ export default function Home() {
       const res = await fetch("/api/scout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ brief: targetBrief, province: provToSend }),
+        body: JSON.stringify({
+          brief: targetBrief,
+          province: provToSend,
+          limit: limitToFetch,
+        }),
       });
       const data = await res.json();
       if (data.success) {
         setResults(data.locations);
-        if (data.locations.length > 0) {
-          setSelectedLocation(data.locations[0]);
+        if (data.totalMatches) {
+          setTotalDbMatches(data.totalMatches);
         }
+        // Keep selectedLocation null so the map frames all pins without flying into any random pin
+        setSelectedLocation(null);
       }
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleLoadMore = () => {
+    const nextLimit = currentLimit + 200;
+    setCurrentLimit(nextLimit);
+    handleSearch(brief, province, nextLimit);
   };
 
   useEffect(() => {
@@ -454,10 +465,12 @@ export default function Home() {
 
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-slate-500 hidden sm:inline">
-                พิกัดจริง ททท. & Host
+                {province !== "all" && !province.startsWith("region:") 
+                  ? `ครบทุกพิกัดใน ${province}` 
+                  : `ฐานข้อมูล ททท. ${totalDbMatches.toLocaleString()} พิกัด`}
               </span>
               <div className="font-mono text-xs sm:text-sm text-[#0284c7] font-black bg-[#f0f9ff] px-2.5 py-1 rounded-lg border border-[#bae6fd]">
-                {displayedLocations.length} โลเคชัน
+                แสดง {displayedLocations.length} โลเคชัน
               </div>
             </div>
           </div>
@@ -724,6 +737,19 @@ export default function Home() {
                 );
               })}
             </div>
+
+            {/* Load More Button */}
+            {displayedLocations.length < totalDbMatches && activeTab === "search" && !filterOnlyPinned && (
+              <div className="text-center py-6">
+                <button
+                  onClick={handleLoadMore}
+                  disabled={loading}
+                  className="btn btn-blue text-xs sm:text-sm px-6 py-2.5 rounded-xl font-black shadow-[3px_3px_0px_#0369a1] hover:scale-[1.02] active:scale-95 transition"
+                >
+                  {loading ? "กำลังค้นหาและดึงข้อมูล..." : `+ โหลดโลเคชันเพิ่มอีก (+200) (จากทั้งหมด ${totalDbMatches.toLocaleString()} พิกัด)`}
+                </button>
+              </div>
+            )}
             </>
           )}
 

@@ -23,7 +23,7 @@ import { detectProvinceFromText, THAI_PROVINCES, getProvincesInRegion } from "@/
 
 export async function POST(req: Request) {
   try {
-    const { brief, province, category } = await req.json();
+    const { brief, province, category, limit } = await req.json();
     const data = loadData();
 
     const briefLower = (brief || "").toLowerCase().trim();
@@ -100,30 +100,64 @@ export async function POST(req: Request) {
       return { item, score };
     });
 
-    // Determine how many items to return:
-    // When browsing without brief or by region/province, give 80-120 items so the map is full of pins!
-    const maxResults = isBriefEmpty ? (effectiveProvince ? 120 : isRegionFilter ? 100 : 80) : 36;
+    const validMatches = scored.filter((s) => s.score > 0);
+    const totalMatches = validMatches.length;
 
-    const results = scored
-      .filter((s) => s.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, maxResults)
-      .map((s) => {
-        const item = s.item;
-        return {
-          ...item,
-          relevanceScore: Math.min(Math.round(s.score * 2), 99),
-          hasVerifiedCoords: !!(item.lat && item.lng),
-          hasOperatingHours: !!item.time,
-          hasDirectContact: !!item.tel,
-          hasFeeInfo: !!(item.fee && item.fee !== "0" && item.fee !== "-"),
-          permitWarning: "พื้นที่นี้อยู่ภายใต้การกำกับดูแลของหน่วยงานท้องถิ่น/กรมอุทยานฯ โปรดติดต่อเจ้าหน้าที่ล่วงหน้าอย่างน้อย 7-15 วันเพื่อขออนุญาตถ่ายทำ",
-        };
-      });
+    let selectedItems: typeof scored = [];
+
+    if (isBriefEmpty && !effectiveProvince && !isRegionFilter) {
+      // Nationwide browsing without brief:
+      // Evenly sample across ALL 77 provinces so pins cover the entire country from North to South!
+      const byProvince: Record<string, typeof scored> = {};
+      for (const s of validMatches) {
+        const prov = s.item.province || "อื่นๆ";
+        if (!byProvince[prov]) byProvince[prov] = [];
+        byProvince[prov].push(s);
+      }
+
+      // Sort each province's items by score
+      for (const prov of Object.keys(byProvince)) {
+        byProvince[prov].sort((a, b) => b.score - a.score);
+      }
+
+      const targetCount = limit || 400;
+      const provKeys = Object.keys(byProvince);
+      const rounds = Math.ceil(targetCount / Math.max(provKeys.length, 1));
+
+      for (let round = 0; round < rounds; round++) {
+        for (const prov of provKeys) {
+          if (byProvince[prov][round]) {
+            selectedItems.push(byProvince[prov][round]);
+            if (selectedItems.length >= targetCount) break;
+          }
+        }
+        if (selectedItems.length >= targetCount) break;
+      }
+    } else {
+      // Province, Region, or Keyword Search:
+      // If province is selected, return ALL locations for that province!
+      validMatches.sort((a, b) => b.score - a.score);
+      const targetLimit = limit || (effectiveProvince ? 1000 : isRegionFilter ? 600 : 150);
+      selectedItems = validMatches.slice(0, targetLimit);
+    }
+
+    const results = selectedItems.map((s) => {
+      const item = s.item;
+      return {
+        ...item,
+        relevanceScore: Math.min(Math.round(s.score * 2), 99),
+        hasVerifiedCoords: !!(item.lat && item.lng),
+        hasOperatingHours: !!item.time,
+        hasDirectContact: !!item.tel,
+        hasFeeInfo: !!(item.fee && item.fee !== "0" && item.fee !== "-"),
+        permitWarning: "พื้นที่นี้อยู่ภายใต้การกำกับดูแลของหน่วยงานท้องถิ่น/กรมอุทยานฯ โปรดติดต่อเจ้าหน้าที่ล่วงหน้าอย่างน้อย 7-15 วันเพื่อขออนุญาตถ่ายทำ",
+      };
+    });
 
     return NextResponse.json({
       success: true,
-      totalMatches: results.length,
+      totalMatches,
+      totalDatabase: data.length,
       locations: results,
     });
   } catch (error: any) {
