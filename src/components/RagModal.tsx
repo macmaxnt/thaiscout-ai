@@ -1,9 +1,22 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { 
-  Sparkles, X, Camera, Truck, ShieldAlert, Send, 
-  HelpCircle, CheckCircle2, AlertTriangle, FileText, Phone, Compass
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  AlertTriangle,
+  ArrowUpRight,
+  Bot,
+  Camera,
+  Check,
+  CircleAlert,
+  FileText,
+  HelpCircle,
+  MapPin,
+  Phone,
+  Send,
+  ShieldCheck,
+  Truck,
+  X,
+  Zap,
 } from "lucide-react";
 
 interface RagModalProps {
@@ -14,272 +27,153 @@ interface RagModalProps {
 
 export default function RagModal({ location, brief, onClose }: RagModalProps) {
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [dossier, setDossier] = useState<any>(null);
   const [question, setQuestion] = useState("");
   const [qaLoading, setQaLoading] = useState(false);
   const [qaList, setQaList] = useState<{ q: string; a: string; citation: any }[]>([]);
+  const dialogRef = useRef<HTMLElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
 
-  useEffect(() => {
-    fetchDossier();
-  }, [location]);
+  const dismiss = useCallback(() => {
+    onClose();
+    window.setTimeout(() => returnFocusRef.current?.focus(), 0);
+  }, [onClose]);
 
-  const fetchDossier = async () => {
+  const fetchDossier = useCallback(async () => {
     setLoading(true);
+    setError("");
+    setQaList([]);
     try {
-      const res = await fetch("/api/rag", {
+      const response = await fetch("/api/rag", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ location, brief }),
       });
-      const data = await res.json();
-      if (data.success) {
-        setDossier(data.dossier);
-      }
-    } catch (err) {
-      console.error(err);
+      const data = await response.json();
+      if (!data.success) throw new Error(data.error || "ไม่สามารถเปิดข้อมูลสถานที่ได้");
+      setDossier(data.dossier);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "ไม่สามารถเปิดข้อมูลสถานที่ได้");
     } finally {
       setLoading(false);
     }
-  };
+  }, [brief, location]);
+
+  useEffect(() => {
+    returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    closeButtonRef.current?.focus();
+    const handleDialogKeys = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { event.preventDefault(); dismiss(); return; }
+      if (event.key !== "Tab") return;
+      const focusable = dialogRef.current?.querySelectorAll<HTMLElement>("button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), a[href]");
+      if (!focusable?.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", handleDialogKeys);
+    return () => document.removeEventListener("keydown", handleDialogKeys);
+  }, [dismiss]);
+
+  useEffect(() => {
+    fetchDossier();
+  }, [fetchDossier]);
 
   const handleAsk = async (askText = question) => {
-    if (!askText.trim()) return;
+    if (!askText.trim() || qaLoading) return;
     setQaLoading(true);
     try {
-      const res = await fetch("/api/rag", {
+      const response = await fetch("/api/rag", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ location, brief, question: askText }),
       });
-      const data = await res.json();
-      if (data.success) {
-        setQaList((prev) => [
-          ...prev,
-          { q: askText, a: data.answer, citation: data.citation },
-        ]);
-        setQuestion("");
-      }
-    } catch (err) {
-      console.error(err);
+      const data = await response.json();
+      if (!data.success) throw new Error(data.error || "ไม่สามารถวิเคราะห์คำถามนี้ได้");
+      setQaList((current) => [...current, { q: askText, a: data.answer, citation: data.citation }]);
+      setQuestion("");
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "ไม่สามารถวิเคราะห์คำถามนี้ได้");
     } finally {
       setQaLoading(false);
     }
   };
 
   const quickQuestions = [
-    "🚁 บินโดรนถ่ายมุมสูงได้ไหม มีขั้นตอนยังไง?",
-    "🚐 รถตู้กองถ่ายและรถปั่นไฟเข้าถึงจุดถ่ายทำได้ไหม?",
-    "💰 เสียค่าธรรมเนียมขอถ่ายทำเท่าไหร่ ติดต่อใคร?",
+    "บินโดรนได้หรือไม่ และควรเตรียมอะไร?",
+    "รถตู้กองถ่ายและรถปั่นไฟเข้าถึงได้ไหม?",
+    "ต้องติดต่อหน่วยงานใดก่อนถ่ายทำ?",
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-6 overflow-y-auto">
-      <div className="bg-white border-[3px] border-[#7c3aed] rounded-[28px] shadow-[8px_8px_0px_#6d28d9] w-full max-w-3xl overflow-hidden my-auto flex flex-col max-h-[90vh]">
-        
-        {/* Modal Header */}
-        <div className="bg-[#f5f3ff] border-b-2 border-[#7c3aed] p-4 sm:px-6 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="bg-[#ddd6fe] border-2 border-[#7c3aed] rounded-xl p-2 text-xl shadow-[2px_2px_0px_#6d28d9]">
-              ✨
-            </div>
+    <div className="detail-overlay" role="presentation" onMouseDown={(event) => event.currentTarget === event.target && dismiss()}>
+      <section className="detail-modal" ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="location-dossier-title">
+        <header className="detail-modal__header">
+          <div className="detail-modal__heading">
+            <div className="detail-modal__icon"><Bot size={20} /></div>
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base sm:text-lg font-black text-[#4c1d95]">
-                  AI RAG Production Consultant
-                </h3>
-                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-[#bbf7d0] border border-[#16a34a] text-[#14532d]">
-                  Grounded with TAT Corpus
-                </span>
-              </div>
-              <p className="text-xs font-bold text-slate-500">
-                {location.name_th} ({location.province}) • Corpus ID: #{location.id}
-              </p>
+              <span className="detail-modal__eyebrow">LOCATION DOSSIER · TAT-GROUNDED</span>
+              <h2 id="location-dossier-title">{location.name_th}</h2>
+              <p><MapPin size={13} /> {location.province}{location.district ? ` · ${location.district}` : ""}</p>
             </div>
           </div>
+          <button className="detail-close" ref={closeButtonRef} type="button" onClick={dismiss} aria-label="ปิดรายละเอียดสถานที่"><X size={19} /></button>
+        </header>
 
-          <button
-            onClick={onClose}
-            className="btn btn-purple p-2 rounded-xl text-xs font-black cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+        <div className="detail-modal__body">
+          <aside className="detail-sidebar">
+            <div className="detail-sidebar__intro">
+              <span>AI PRODUCTION BRIEF</span>
+              <p>{brief}</p>
+            </div>
+            <dl className="detail-facts">
+              <div><dt>หมวดหมู่</dt><dd>{location.category || "สถานที่ท่องเที่ยว"}</dd></div>
+              <div><dt>พิกัด</dt><dd>{location.lat && location.lng ? `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}` : "ไม่มีพิกัดในรายการ"}</dd></div>
+              {location.tel && <div><dt>ติดต่อ</dt><dd><Phone size={13} /> {location.tel}</dd></div>}
+            </dl>
+            <div className="detail-sidebar__note"><ShieldCheck size={16} /><span>รายละเอียดที่ไม่มีในฐานข้อมูลจะแสดงเป็น “ต้องตรวจสอบ” ไม่ถูกเติมด้วยการคาดเดา</span></div>
+          </aside>
+
+          <main className="detail-content">
+            {loading && <div className="detail-loading"><span className="detail-loading__mark" /><strong>กำลังรวบรวมข้อมูลสำหรับกองถ่าย</strong><p>กำลังตรวจแหล่งอ้างอิงและเงื่อนไขของสถานที่</p></div>}
+            {error && <div className="detail-error" role="alert"><CircleAlert size={18} /><div><strong>เปิดข้อมูลไม่ได้ในขณะนี้</strong><p>{error}</p><button type="button" onClick={fetchDossier}>ลองอีกครั้ง</button></div></div>}
+            {!loading && !error && dossier && <>
+              {location.detail && <section className="detail-section detail-source">
+                <div className="detail-section__title"><FileText size={17} /><div><h3>ข้อมูลสถานที่</h3><span>คำอธิบายจากรายการต้นทาง</span></div></div>
+                <p>{location.detail}</p>
+                {location.activity && <div className="detail-activity"><ArrowUpRight size={14} /> กิจกรรมที่แนะนำ: {location.activity}</div>}
+              </section>}
+
+              <div className="detail-analysis-grid">
+                <section className="detail-section">
+                  <div className="detail-section__title"><Camera size={17} /><div><h3>ภาพและแสง</h3><span>Cinematic read</span></div></div>
+                  <dl className="detail-list"><div><dt>แสงที่แนะนำ</dt><dd>{dossier.cinematicAnalysis?.lightingRecommendation || "ต้องตรวจสอบหน้างาน"}</dd></div><div><dt>มิติภาพ</dt><dd>{dossier.cinematicAnalysis?.visualAesthetic || "ต้องตรวจสอบหน้างาน"}</dd></div><div><dt>สภาพเสียง</dt><dd>{dossier.cinematicAnalysis?.soundEnvironment || "ต้องตรวจสอบหน้างาน"}</dd></div></dl>
+                </section>
+                <section className="detail-section">
+                  <div className="detail-section__title"><Truck size={17} /><div><h3>การเข้าถึงกองถ่าย</h3><span>Logistics & power</span></div></div>
+                  <dl className="detail-list"><div><dt>การเข้าถึง</dt><dd>{dossier.logisticsAnalysis?.accessGrade || "ต้องตรวจสอบหน้างาน"}</dd></div><div><dt>ระบบไฟ</dt><dd>{dossier.logisticsAnalysis?.powerAndGear || "ต้องตรวจสอบหน้างาน"}</dd></div><div><dt>ขนาดกอง</dt><dd>{dossier.logisticsAnalysis?.crewCapacity || "ต้องตรวจสอบหน้างาน"}</dd></div></dl>
+                </section>
+              </div>
+
+              <section className="detail-section detail-permit">
+                <div className="detail-section__title"><AlertTriangle size={17} /><div><h3>ใบอนุญาตและความปลอดภัย</h3><span>Production checks before recce</span></div></div>
+                <dl className="detail-list"><div><dt>หน่วยงานที่เกี่ยวข้อง</dt><dd>{dossier.permitAndSafety?.governingBody || "ต้องตรวจสอบกับผู้ดูแลพื้นที่"}</dd></div><div><dt>โดรน</dt><dd>{dossier.permitAndSafety?.droneNotice || "ต้องตรวจสอบกับผู้ดูแลพื้นที่"}</dd></div></dl>
+                <p className="detail-permit__rule"><Zap size={14} /> {dossier.permitAndSafety?.safeRefusalRule || "หากข้อมูลไม่อยู่ในฐานข้อมูล โปรดติดต่อผู้ดูแลพื้นที่ก่อนวางแผนถ่ายทำ"}</p>
+              </section>
+
+              <section className="detail-section detail-qa">
+                <div className="detail-section__title"><HelpCircle size={17} /><div><h3>ถาม AI เพิ่มเติม</h3><span>คำตอบอิงข้อมูลของสถานที่นี้</span></div></div>
+                <div className="detail-prompts">{quickQuestions.map((prompt) => <button key={prompt} type="button" onClick={() => handleAsk(prompt)} disabled={qaLoading}>{prompt}</button>)}</div>
+                <div className="detail-ask"><input type="text" value={question} onChange={(event) => setQuestion(event.target.value)} onKeyDown={(event) => event.key === "Enter" && handleAsk()} placeholder="ถามเรื่องเส้นทาง, พื้นที่พักกอง, หรือข้อจำกัดหน้างาน…" /><button type="button" onClick={() => handleAsk()} disabled={qaLoading || !question.trim()}><Send size={16} /> {qaLoading ? "กำลังวิเคราะห์" : "ถาม AI"}</button></div>
+                {qaList.length > 0 && <div className="detail-answers">{qaList.map((item, index) => <article key={`${item.q}-${index}`}><p className="detail-question">{item.q}</p><p className="detail-answer">{item.a}</p>{item.citation && <span className="detail-citation"><Check size={12} /> {item.citation.source} · ID {item.citation.corpusId}</span>}</article>)}</div>}
+              </section>
+            </>}
+          </main>
         </div>
-
-        {/* Modal Body */}
-        <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1 bg-[#fafaf9]">
-          
-          {loading ? (\n            <div className=\"py-16 flex flex-col items-center justify-center text-center\">\n              <div className=\"w-10 h-10 border-4 border-[#7c3aed] border-t-transparent rounded-full animate-spin mb-3\"></div>\n              <p className=\"font-black text-slate-700 text-sm\">\n                กำลังดึงบริบทสถานที่ & วิเคราะห์ความเป็นไปได้ของกองถ่าย (RAG Retrieval)...\n              </p>\n              <p className=\"text-xs font-bold text-slate-400 mt-1\">\n                Applying Grounded Facts & Safety Refusal Rules\n              </p>\n            </div>\n          ) : dossier ? (
-            <>
-              {/* 📄 Full Original Description from TAT */}
-              {location.detail && (
-                <div className="bg-white border-2 border-slate-300 rounded-[20px] p-4 shadow-[3px_3px_0px_#94a3b8]">
-                  <div className="flex items-center justify-between mb-2 text-slate-800 font-black text-sm">
-                    <span className="flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-[#0284c7]" />
-                      ข้อมูลรายละเอียดสถานที่ฉบับเต็ม (TAT Official Description)
-                    </span>
-                    <span className="text-[10px] font-mono text-slate-400 font-bold">
-                      {location.detail.length} ตัวอักษร
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-700 leading-relaxed font-medium bg-[#f8fafc] p-3 rounded-xl border border-slate-200 whitespace-pre-line">
-                    {location.detail}
-                  </p>
-                  {location.activity && (
-                    <p className="text-xs text-[#0c4a6e] font-bold mt-2">
-                      🎯 กิจกรรมที่ ททท. แนะนำ: {location.activity}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* 🎬 1. Cinematic & Lighting Analysis */}
-              <div className="bg-white border-2 border-[#0284c7] rounded-[20px] p-4 shadow-[3px_3px_0px_#0369a1]">
-                <div className="flex items-center gap-2 mb-2 text-[#0c4a6e] font-black text-sm">
-                  <Camera className="w-4 h-4 text-[#0284c7]" />
-                  <span>1. มุมกล้องและช่วงเวลาถ่ายทำ (Cinematic & Lighting)</span>
-                </div>
-                <div className="space-y-2 text-xs font-medium text-slate-700">
-                  <div className="bg-[#f0f9ff] p-2.5 rounded-xl border border-[#bae6fd]">
-                    <strong className="text-[#0c4a6e]">☀️ แสงที่แนะนำ:</strong> {dossier.cinematicAnalysis.lightingRecommendation}
-                  </div>
-                  <div className="p-2">
-                    <strong className="text-slate-900">🎨 มิติภาพ:</strong> {dossier.cinematicAnalysis.visualAesthetic}
-                  </div>
-                  <div className="p-2 text-amber-900 bg-amber-50 rounded-xl border border-amber-200">
-                    <strong>🔊 สภาพเสียงในกอง:</strong> {dossier.cinematicAnalysis.soundEnvironment}
-                  </div>
-                </div>
-              </div>
-
-              {/* 🚐 2. Logistics & Gear Access */}
-              <div className="bg-white border-2 border-[#16a34a] rounded-[20px] p-4 shadow-[3px_3px_0px_#15803d]">
-                <div className="flex items-center gap-2 mb-2 text-[#14532d] font-black text-sm">
-                  <Truck className="w-4 h-4 text-[#16a34a]" />
-                  <span>2. การเดินทางและระบบไฟฟ้ากองถ่าย (Logistics & Power)</span>
-                </div>
-                <div className="space-y-2 text-xs font-medium text-slate-700">
-                  <div className="flex items-start gap-2">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                    <span><strong>ระดับความสะดวก:</strong> {dossier.logisticsAnalysis.accessGrade}</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                    <span><strong>ระบบไฟและเครื่องปั่นไฟ:</strong> {dossier.logisticsAnalysis.powerAndGear}</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                    <span><strong>ขนาดกองถ่ายที่แนะนำ:</strong> {dossier.logisticsAnalysis.crewCapacity}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* 🔒 3. Permit & Safe Refusal (Lab 4 Core Rule) */}
-              <div className="bg-[#fff1f2] border-2 border-[#e11d48] rounded-[20px] p-4 shadow-[3px_3px_0px_#be123c]">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2 text-[#881337] font-black text-sm">
-                    <ShieldAlert className="w-4 h-4 text-[#e11d48]" />
-                    <span>3. ระเบียบขออนุญาต & ป้องกันการมโน (Safe Refusal)</span>
-                  </div>
-                  <span className="text-[10px] font-mono font-black uppercase px-2 py-0.5 rounded bg-white text-rose-700 border border-rose-300">
-                    Anti-Hallucination
-                  </span>
-                </div>
-                <div className="space-y-2 text-xs font-medium text-slate-800">
-                  <p>
-                    <strong>🏛️ หน่วยงานกำกับดูแล:</strong> {dossier.permitAndSafety.governingBody}
-                  </p>
-                  <p className="bg-white/80 p-2.5 rounded-xl border border-rose-200">
-                    <strong>🚁 ระเบียบโดรน:</strong> {dossier.permitAndSafety.droneNotice}
-                  </p>
-                  <div className="bg-amber-100/80 border border-amber-300 p-2.5 rounded-xl text-amber-900 text-[11px] font-bold">
-                    ⚠️ <strong>กฎ Safe Refusal:</strong> {dossier.permitAndSafety.safeRefusalRule}
-                  </div>
-                </div>
-              </div>
-
-              {/* 💬 4. Interactive Q&A Assistant (RAG Chat on this location) */}
-              <div className="bg-white border-2 border-[#7c3aed] rounded-[20px] p-4 shadow-[3px_3px_0px_#6d28d9]">
-                <div className="flex items-center gap-2 mb-2 text-[#4c1d95] font-black text-sm">
-                  <HelpCircle className="w-4 h-4 text-[#7c3aed]" />
-                  <span>ถามคำถามเจาะลึกเฉพาะสถานที่นี้ (Grounded Q&A)</span>
-                </div>
-
-                {/* Quick Prompts */}
-                <div className="flex flex-wrap gap-1.5 mb-3">
-                  {quickQuestions.map((q, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => handleAsk(q)}
-                      disabled={qaLoading}
-                      className="text-[11px] px-2.5 py-1 rounded-lg bg-[#f5f3ff] hover:bg-[#ddd6fe] text-[#4c1d95] border border-[#ddd6fe] font-bold transition cursor-pointer text-left"
-                    >
-                      {q}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Question Input */}
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={question}
-                    onChange={(e) => setQuestion(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleAsk()}
-                    placeholder="เช่น ทางเดินแคบไหม? มีห้องน้ำสำหรับนักแสดงไหม?..."
-                    className="flex-1 bg-[#fafaf9] border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-[#7c3aed]"
-                  />
-                  <button
-                    onClick={() => handleAsk()}
-                    disabled={qaLoading || !question.trim()}
-                    className="btn btn-purple text-xs px-4 py-2 rounded-xl font-black shrink-0"
-                  >
-                    <Send className="w-3.5 h-3.5" />
-                    {qaLoading ? "กำลังวิเคราะห์..." : "ถาม AI"}
-                  </button>
-                </div>
-
-                {/* Q&A Stream / History */}
-                {qaList.length > 0 && (
-                  <div className="mt-4 space-y-3 pt-3 border-t border-slate-200">
-                    {qaList.map((item, idx) => (
-                      <div key={idx} className="space-y-1.5 text-xs">
-                        <div className="font-black text-[#4c1d95] bg-[#f5f3ff] p-2 rounded-lg border border-[#ddd6fe]">
-                          ❓ {item.q}
-                        </div>
-                        <div className="bg-white p-3 rounded-xl border border-slate-300 whitespace-pre-line text-slate-800 leading-relaxed font-medium shadow-xs">
-                          {item.a}
-                          {item.citation && (
-                            <div className="mt-2 pt-2 border-t border-slate-200 text-[10px] font-mono text-slate-500 flex items-center justify-between">
-                              <span>📚 แหล่งข้อมูล: {item.citation.source}</span>
-                              <span className="font-bold text-[#0284c7]">ID: #{item.citation.corpusId}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </>
-          ) : null}
-
-        </div>
-
-        {/* Modal Footer */}
-        <div className="bg-[#f8fafc] border-t-2 border-slate-200 p-3 sm:px-6 flex items-center justify-between text-xs shrink-0">
-          <div className="text-[11px] font-bold text-slate-500">
-            ระบบวิเคราะห์โดย ThaiScout AI RAG Engine · อ้างอิงฐานข้อมูล ททท. 8,628 แห่ง
-          </div>
-          <button
-            onClick={onClose}
-            className="btn btn-purple text-xs px-4 py-1.5 rounded-xl font-black cursor-pointer"
-          >
-            ปิดหน้าต่าง
-          </button>
-        </div>
-
-      </div>
+      </section>
     </div>
   );
 }

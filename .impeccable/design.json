@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-19T20:40:52+07:00",
+  "title": "Design System: ThaiScout AI",
+  "extensions": {
+    "colorMeta": {
+      "mist": { "role": "neutral", "displayName": "Map Mist", "canonical": "#ccd9e2", "tonalRamp": ["oklch(15% 0.025 240)", "oklch(26% 0.03 240)", "oklch(38% 0.032 240)", "oklch(50% 0.03 240)", "oklch(62% 0.028 240)", "oklch(74% 0.024 240)", "#ccd9e2", "oklch(95% 0.009 240)"] },
+      "paper": { "role": "neutral", "displayName": "Warm Paper", "canonical": "#f7f4ee", "tonalRamp": ["oklch(16% 0.01 80)", "oklch(28% 0.012 80)", "oklch(42% 0.012 80)", "oklch(56% 0.012 80)", "oklch(70% 0.012 80)", "oklch(82% 0.01 80)", "#f7f4ee", "oklch(98% 0.004 80)"] },
+      "ink": { "role": "neutral", "displayName": "Production Ink", "canonical": "#193a61", "tonalRamp": ["oklch(15% 0.06 250)", "oklch(24% 0.07 250)", "#193a61", "oklch(38% 0.065 250)", "oklch(50% 0.055 250)", "oklch(63% 0.04 250)", "oklch(77% 0.025 250)", "oklch(93% 0.01 250)"] },
+      "blue": { "role": "primary", "displayName": "Scout Blue", "canonical": "#285185", "tonalRamp": ["oklch(15% 0.07 252)", "oklch(24% 0.09 252)", "#285185", "oklch(42% 0.1 252)", "oklch(54% 0.09 252)", "oklch(67% 0.07 252)", "oklch(80% 0.045 252)", "oklch(94% 0.015 252)"] },
+      "blue-deep": { "role": "primary", "displayName": "Deep Coordinate Blue", "canonical": "#193f6d", "tonalRamp": ["oklch(14% 0.07 252)", "#193f6d", "oklch(31% 0.09 252)", "oklch(43% 0.1 252)", "oklch(55% 0.09 252)", "oklch(68% 0.065 252)", "oklch(81% 0.04 252)", "oklch(95% 0.012 252)"] },
+      "orange": { "role": "secondary", "displayName": "Call Sheet Orange", "canonical": "#d67940", "tonalRamp": ["oklch(18% 0.055 52)", "oklch(30% 0.09 52)", "oklch(43% 0.12 52)", "#d67940", "oklch(64% 0.14 52)", "oklch(75% 0.11 52)", "oklch(86% 0.07 52)", "oklch(96% 0.025 52)"] },
+      "wine": { "role": "tertiary", "displayName": "Recce Wine", "canonical": "#6f4849", "tonalRamp": ["oklch(16% 0.035 20)", "oklch(26% 0.05 20)", "#6f4849", "oklch(42% 0.065 20)", "oklch(54% 0.065 20)", "oklch(68% 0.05 20)", "oklch(81% 0.03 20)", "oklch(95% 0.012 20)"] },
+      "muted": { "role": "neutral", "displayName": "Crew Note", "canonical": "#64758a", "tonalRamp": ["oklch(17% 0.02 250)", "oklch(29% 0.025 250)", "oklch(41% 0.03 250)", "#64758a", "oklch(62% 0.027 250)", "oklch(74% 0.02 250)", "oklch(86% 0.014 250)", "oklch(96% 0.006 250)"] },
+      "line": { "role": "neutral", "displayName": "Blue Rule", "canonical": "rgba(40,81,133,.18)", "tonalRamp": ["rgba(25,63,109,.85)", "rgba(25,63,109,.7)", "rgba(40,81,133,.55)", "rgba(40,81,133,.4)", "rgba(40,81,133,.3)", "rgba(40,81,133,.18)", "rgba(40,81,133,.1)", "rgba(40,81,133,.04)"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Creative Treatment Display", "purpose": "Thai-first creative proposition and product wordmark; never dense location metadata." },
+      "body": { "displayName": "Production Body", "purpose": "Editable creative brief, location explanation, and readable grounded details." },
+      "label": { "displayName": "Call Sheet Label", "purpose": "Compact navigation, source status, counts, and map overlay metadata." }
+    },
+    "shadows": [
+      { "name": "brand-offset", "value": "2px 3px 0 #6f4849", "purpose": "Printed-registration offset behind the Scout Blue brand mark." },
+      { "name": "field-lift", "value": "0 9px 28px rgba(40,81,133,.08)", "purpose": "Creative brief above the paper workspace." },
+      { "name": "selected-evidence", "value": "0 4px 14px rgba(111,72,73,.07)", "purpose": "Selected location row only." },
+      { "name": "map-utility", "value": "0 5px 16px rgba(40,81,133,.08)", "purpose": "Map controls, label, and legend over cartography." },
+      { "name": "dock-lift", "value": "0 14px 32px rgba(25,58,97,.16)", "purpose": "Persistent selected-location dock." }
+    ],
+    "motion": [
+      { "name": "control-state", "value": "0.15s–0.18s ease", "purpose": "Row, chip, and utility-control color/state transitions." },
+      { "name": "search-press", "value": "transform and box-shadow 0.16s ease", "purpose": "Tactile search-button hover and active feedback." },
+      { "name": "map-fly", "value": "0.8s", "purpose": "Selected location map fly-to at zoom 14." },
+      { "name": "loading-spinner", "value": "0.75s linear infinite", "purpose": "Search progress only." },
+      { "name": "skeleton-sweep", "value": "1.2s ease infinite", "purpose": "Result-loading skeleton only." }
+    ],
+    "breakpoints": [
+      { "name": "workspace-stack", "value": "1020px" },
+      { "name": "mobile-sheet", "value": "650px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Search Button",
+      "kind": "button",
+      "refersTo": "button-search",
+      "description": "Primary brief-submission action with the signature folded-corner print edge.",
+      "html": "<button class=\"ds-search-btn\" type=\"button\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"11\" cy=\"11\" r=\"6\"></circle><path d=\"m16 16 4 4\"></path></svg>ค้นหาโลเคชัน</button>",
+      "css": ".ds-search-btn{display:inline-flex;align-items:center;gap:7px;padding:9px 13px;border:0;border-radius:8px 8px 8px 3px;background:#d67940;color:#fff;font:800 12px/1 'DM Sans','Mitr',sans-serif;box-shadow:0 4px 0 #a7562c;cursor:pointer;transition:transform .16s ease,box-shadow .16s ease}.ds-search-btn svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2.5}.ds-search-btn:hover{transform:translateY(-2px);box-shadow:0 6px 0 #a7562c}.ds-search-btn:active{transform:translateY(2px);box-shadow:0 2px 0 #a7562c}.ds-search-btn:focus-visible{outline:3px solid #d67940;outline-offset:3px}"
+    },
+    {
+      "name": "Creative Brief Field",
+      "kind": "input",
+      "refersTo": "field-brief",
+      "description": "Raised paper field that hands a Thai creative brief into a location search.",
+      "html": "<section class=\"ds-brief\"><div class=\"ds-brief-head\"><span>✦ Brief to location</span><small>● AI agent online</small></div><textarea aria-label=\"Creative brief\">น้ำตก ลำธาร โขดหิน บรรยากาศลึกลับ</textarea><div class=\"ds-brief-foot\"><span>⌖ เชียงใหม่</span><button type=\"button\">ค้นหา</button></div></section>",
+      "css": ".ds-brief{padding:15px;border:1px solid rgba(40,81,133,.24);border-radius:14px;background:#fff;box-shadow:0 9px 28px rgba(40,81,133,.08);font-family:'DM Sans','Mitr',sans-serif}.ds-brief-head,.ds-brief-foot{display:flex;align-items:center;justify-content:space-between;gap:10px}.ds-brief-head{margin-bottom:10px;color:#285185;font-size:12px;font-weight:800}.ds-brief-head small{color:#6f4849;font-size:10px;font-weight:750}.ds-brief-head small::first-letter{color:#d67940}.ds-brief textarea{display:block;width:100%;min-height:96px;resize:vertical;border:0;outline:0;background:transparent;color:#193a61;font:400 14px/1.55 'DM Sans','Mitr',sans-serif}.ds-brief-foot{padding-top:13px;border-top:1px solid rgba(40,81,133,.13);color:#285185;font-size:12px;font-weight:750}.ds-brief-foot button{border:0;border-radius:8px 8px 8px 3px;padding:8px 11px;background:#d67940;color:#fff;font:800 12px/1 'DM Sans','Mitr',sans-serif;cursor:pointer}.ds-brief textarea:focus-visible,.ds-brief-foot button:focus-visible{outline:3px solid #d67940;outline-offset:3px}"
+    },
+    {
+      "name": "Suggestion Chip",
+      "kind": "chip",
+      "refersTo": "chip-suggestion",
+      "description": "Optional quick brief, never primary navigation.",
+      "html": "<button class=\"ds-chip\" type=\"button\">พีเรียดสงบ</button>",
+      "css": ".ds-chip{padding:4px 8px;border:1px solid rgba(111,72,73,.2);border-radius:999px;background:#f6edef;color:#6f4849;font:700 10px/1 'DM Sans','Mitr',sans-serif;cursor:pointer;transition:color .15s ease,background .15s ease}.ds-chip:hover{background:#6f4849;color:#fff}.ds-chip:focus-visible{outline:3px solid #d67940;outline-offset:3px}"
+    },
+    {
+      "name": "Location Result",
+      "kind": "card",
+      "refersTo": "card-location-selected",
+      "description": "Ranked location row with explicit selection and Recce commitment states.",
+      "html": "<article class=\"ds-result ds-result--selected\"><button class=\"ds-result-main\" type=\"button\" aria-pressed=\"true\"><span class=\"ds-index\">01</span><span><strong>เรือนไทยริมน้ำ 100 ปี</strong><small>⌖ พระนครศรีอยุธยา</small><em>แสงเช้า-เย็นสะท้อนผิวน้ำและไม้สักเก่า</em><i>บ้าน &amp; เรือนไทย</i></span></button><button class=\"ds-save\" type=\"button\">✓ จุดที่ 1</button></article>",
+      "css": ".ds-result{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:12px 12px 12px 0;border:1px solid transparent;border-radius:12px;font-family:'DM Sans','Mitr',sans-serif}.ds-result--selected{padding-left:11px;border-color:rgba(214,121,64,.38);background:#fffaf4;box-shadow:0 4px 14px rgba(111,72,73,.07)}.ds-result-main{display:grid;grid-template-columns:25px minmax(0,1fr);gap:10px;padding:0;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer}.ds-index{color:#96a7b8;font-size:10px;font-weight:800;letter-spacing:.04em}.ds-result strong,.ds-result small,.ds-result em,.ds-result i{display:block}.ds-result strong{overflow:hidden;color:#193f6d;font-size:13px;font-weight:800;text-overflow:ellipsis;white-space:nowrap}.ds-result small{margin-top:4px;color:#64758a;font-size:10px;font-weight:650}.ds-result em{display:-webkit-box;margin-top:7px;overflow:hidden;color:#52677f;font-size:11px;font-style:normal;line-height:1.43;-webkit-box-orient:vertical;-webkit-line-clamp:2}.ds-result i{width:max-content;margin-top:8px;padding:3px 6px;border-radius:4px;background:#f5eaeb;color:#6f4849;font-size:9px;font-style:normal;font-weight:700}.ds-save{align-self:start;min-height:36px;padding:7px 9px;border:1px solid #6f4849;border-radius:8px;background:#6f4849;color:#fff;font:800 10px/1 'DM Sans','Mitr',sans-serif;cursor:pointer}.ds-result button:focus-visible{outline:3px solid #d67940;outline-offset:3px}"
+    },
+    {
+      "name": "View Switcher",
+      "kind": "nav",
+      "description": "Compact, underlined mode selection between ranked results and the saved Recce list.",
+      "html": "<nav class=\"ds-tabs\" aria-label=\"View\"><button class=\"ds-tab ds-tab--active\" type=\"button\" aria-pressed=\"true\">ผลลัพธ์ <b>12</b></button><button class=\"ds-tab\" type=\"button\" aria-pressed=\"false\">Recce list <b>3</b></button></nav>",
+      "css": ".ds-tabs{display:flex;gap:18px;border-bottom:1px solid rgba(40,81,133,.14);font-family:'DM Sans','Mitr',sans-serif}.ds-tab{position:relative;padding:12px 0 13px;border:0;background:transparent;color:#64758a;font-size:12px;font-weight:750;cursor:pointer}.ds-tab b{margin-left:3px;color:#d67940;font-size:10px}.ds-tab--active{color:#285185}.ds-tab--active::after{position:absolute;right:0;bottom:-1px;left:0;height:2px;background:#d67940;content:''}.ds-tab:focus-visible{outline:3px solid #d67940;outline-offset:3px}"
+    },
+    {
+      "name": "Map Status Label",
+      "kind": "custom",
+      "description": "Near-opaque live-map overlay; blue reports context, orange reports the active count divider.",
+      "html": "<div class=\"ds-map-label\"><span>⌖ LIVE MAP</span><b>·</b><span>12 pins</span></div>",
+      "css": ".ds-map-label{display:inline-flex;align-items:center;gap:6px;padding:8px 10px;border:1px solid rgba(40,81,133,.15);border-radius:8px;background:rgba(255,255,255,.93);box-shadow:0 5px 16px rgba(40,81,133,.08);color:#285185;font:800 10px/1 'DM Sans','Mitr',sans-serif;letter-spacing:.06em}.ds-map-label b{color:#d67940}"
+    },
+    {
+      "name": "Selected Location Dock",
+      "kind": "custom",
+      "description": "The persistent map overlay for the current location, with explicit detail action.",
+      "html": "<aside class=\"ds-dock\"><div class=\"ds-dock-icon\">▰</div><div class=\"ds-dock-copy\"><small>SELECTED LOCATION</small><strong>เรือนไทยริมน้ำ 100 ปี</strong><p>18,000 บาท / 12 ชม.</p></div><button type=\"button\">รายละเอียด</button></aside>",
+      "css": ".ds-dock{display:flex;align-items:center;gap:11px;max-width:450px;padding:12px;border:1px solid rgba(40,81,133,.2);border-radius:12px;background:rgba(255,255,255,.97);box-shadow:0 14px 32px rgba(25,58,97,.16);color:#285185;font-family:'DM Sans','Mitr',sans-serif}.ds-dock-icon{display:grid;width:36px;height:36px;flex:0 0 auto;place-items:center;border-radius:9px 4px 9px 4px;background:#d67940;color:#fff}.ds-dock-copy{min-width:0;flex:1}.ds-dock small,.ds-dock strong,.ds-dock p{display:block}.ds-dock small{margin-bottom:2px;color:#d67940;font-size:8px;font-weight:800;letter-spacing:.1em}.ds-dock strong,.ds-dock p{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ds-dock strong{font-size:12px}.ds-dock p{margin:3px 0 0;color:#64758a;font-size:10px}.ds-dock button{min-height:36px;padding:8px;border:0;border-radius:7px;background:#285185;color:#fff;font:800 10px/1 'DM Sans','Mitr',sans-serif;cursor:pointer}.ds-dock button:hover{background:#193f6d}.ds-dock button:focus-visible{outline:3px solid #d67940;outline-offset:3px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Recce Grid",
+    "overview": "ThaiScout AI is a code-led production desk, not a destination-browsing site. The visual language turns a folded recce sheet into an active workspace: warm paper carries the brief and ranked findings; a cool live map occupies the other half; precise blue rules keep the two in one operational frame. Editorial display type lets the Thai creative brief feel like a film treatment, while compact sans-serif metadata behaves like crew notes.\n\nThe atmosphere is calm, precise, and tactile without becoming nostalgic. Orange is the moment of action or live state; wine marks a location that has crossed the line from candidate to committed recce point. The sheet may feel soft at its edges, but information hierarchy, status color, and map pin geometry remain unequivocal.",
+    "keyCharacteristics": ["Split list-and-map workstation built for comparison at a glance.", "Warm paper, cool map mist, crisp navy rules, and sparse production-orange signals.", "Thai-first editorial headline paired with highly scannable production metadata.", "Selection and saved-state are visible simultaneously in list, map, dock, and route."],
+    "rules": [
+      { "name": "The State-Only Accent Rule", "body": "Orange identifies the current operation or selected location, and wine identifies a saved recce point. Do not use either as a broad decorative wash or interchange their meanings.", "section": "colors" },
+      { "name": "The Treatment-Then-Call-Sheet Rule", "body": "Use display type for the creative proposition and DM Sans/Mitr for every task, status, fact, or control. Do not promote raw metadata to editorial display type.", "section": "typography" },
+      { "name": "The Map-First Depth Rule", "body": "Lift only interfaces that must float over a map or clarify a current decision. At rest, results belong to the paper through alignment and rules, not card shadows.", "section": "elevation" }
+    ],
+    "dos": ["Do keep the map and ranked list semantically synchronized: a selected location is orange and opens its map context; a saved location is wine and receives the same Recce order everywhere.", "Do let the warm paper pane carry brief, facts, and decisions while the cool map owns geography.", "Do use compact, concrete metadata and grounded-source status around every creative inference.", "Do use the asymmetric folded-corner treatment only for intentional action marks, not as a general radius replacement.", "Do preserve keyboard focus, Thai language labels, live/error announcements, and mobile 44px touch targets whenever a component is extended."],
+    "donts": ["Don't turn ThaiScout AI into a generic travel booking or destination-discovery interface; this is a production desk.", "Don't use Call Sheet Orange and Recce Wine interchangeably, or scatter them across large decorative surfaces.", "Don't fragment the result list into many elevated cards, rounded pills, or decorative gradients.", "Don't hide map selection, saved state, or route order in color alone.", "Don't add slow, ambient, or autoplay motion; interactions should communicate a decision, search, or change in geographic context."]
+  }
+}
