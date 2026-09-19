@@ -31,7 +31,19 @@ export async function POST(req: Request) {
       let answer = "";
       let confidence = "High (Grounded on TAT Corpus + Statutory Framework)";
 
-      if (q.includes("โดรน") || q.includes("drone") || q.includes("บิน")) {
+      // Try Gemini Grounded RAG first
+      let geminiAnswer = null;
+      try {
+        const { askGeminiProductionRAG } = await import("@/utils/gemini");
+        geminiAnswer = await askGeminiProductionRAG(location, question, brief);
+      } catch (e) {
+        console.warn("Gemini RAG fallback to rules:", e);
+      }
+
+      if (geminiAnswer) {
+        answer = geminiAnswer;
+        confidence = "Very High (Gemini 2.5 Grounded on TAT Corpus + Statutory Framework)";
+      } else if (q.includes("โดรน") || q.includes("drone") || q.includes("บิน")) {
         answer = `【ระเบียบการบินโดรนสำหรับ ${name_th}】\n` +
           `• หน่วยงานกำกับดูแล: ${statutoryAuthority}\n` +
           `• ข้อกำหนด: ${dronePolicy}\n` +

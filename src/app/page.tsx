@@ -41,6 +41,7 @@ export default function Home() {
   const [currentLimit, setCurrentLimit] = useState<number>(400);
   const [filterRegion, setFilterRegion] = useState<string>("ทั้งหมด");
   const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
+  const [geminiAnalysis, setGeminiAnalysis] = useState<any>(null);
   const [customLocations, setCustomLocations] = useState<any[]>([
     {
       id: "host_default_1",
@@ -147,6 +148,7 @@ export default function Home() {
         if (data.totalMatches) {
           setTotalDbMatches(data.totalMatches);
         }
+        setGeminiAnalysis(data.geminiAnalysis || null);
         // Keep selectedLocation null so the map frames all pins without flying into any random pin
         setSelectedLocation(null);
       }
@@ -535,6 +537,48 @@ export default function Home() {
               </div>
             </div>
           </div>
+
+          {/* Gemini AI Scouting Agent Card */}
+          {geminiAnalysis && (
+            <div className="bg-gradient-to-r from-sky-50 via-indigo-50 to-purple-50 border-[2.5px] border-indigo-300 rounded-[20px] p-4 shadow-[4px_4px_0px_#818cf8] mb-4">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-600 text-white font-black text-xs shadow-sm">
+                    ✨
+                  </span>
+                  <span className="font-black text-sm text-indigo-950">Gemini 2.5 Creative Scouting Agent</span>
+                  <span className="text-[10px] uppercase font-mono tracking-wider font-extrabold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full border border-indigo-200">
+                    AI Deconstructed
+                  </span>
+                </div>
+              </div>
+
+              {geminiAnalysis.mood && (
+                <div className="text-xs font-bold text-slate-800 mb-1.5 flex items-start gap-1.5">
+                  <span className="text-indigo-600 font-extrabold shrink-0">🎬 Mood & Tone:</span>
+                  <span>{geminiAnalysis.mood}</span>
+                </div>
+              )}
+
+              {geminiAnalysis.directorTip && (
+                <div className="text-xs font-bold text-slate-700 mb-2.5 flex items-start gap-1.5">
+                  <span className="text-amber-600 font-extrabold shrink-0">💡 คำแนะนำผู้กำกับ:</span>
+                  <span>{geminiAnalysis.directorTip}</span>
+                </div>
+              )}
+
+              {geminiAnalysis.expandedKeywords && geminiAnalysis.expandedKeywords.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-indigo-100">
+                  <span className="text-[11px] font-bold text-indigo-600 mr-1">🔍 คีย์เวิร์ดภูมิประเทศที่ AI ถอดรหัส:</span>
+                  {geminiAnalysis.expandedKeywords.map((kw: string, i: number) => (
+                    <span key={i} className="text-[11px] font-black px-2 py-0.5 bg-white text-indigo-700 border border-indigo-200 rounded-md shadow-xs">
+                      #{kw}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Location Cards Grid (ทำเป็นช่องๆ 2 คอลัมน์ตามที่ขอ) */}
           {loading ? (

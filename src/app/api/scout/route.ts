@@ -49,6 +49,26 @@ export async function POST(req: Request) {
     // Smart province detection from brief if province is not explicitly set
     const detected = detectProvinceFromText(briefLower);
 
+    // Call Gemini Agent to analyze and deconstruct the creative brief
+    let geminiAnalysis: any = null;
+    const expandedTokens: string[] = [];
+
+    if (!isBriefEmpty) {
+      try {
+        const { analyzeBriefWithGemini } = await import("@/utils/gemini");
+        geminiAnalysis = await analyzeBriefWithGemini(briefLower);
+        if (geminiAnalysis?.expandedKeywords && Array.isArray(geminiAnalysis.expandedKeywords)) {
+          for (const kw of geminiAnalysis.expandedKeywords) {
+            const clean = (kw || "").toLowerCase().replace(/[\(\)\[\],.]/g, " ").trim();
+            const words = clean.split(/\s+/).filter((w: string) => w.length > 1);
+            expandedTokens.push(...words);
+          }
+        }
+      } catch (e) {
+        console.warn("Gemini brief analysis failed, continuing with direct tokens:", e);
+      }
+    }
+
     const scored = data.map((item) => {
       let score = 0;
 
@@ -104,6 +124,16 @@ export async function POST(req: Request) {
         if (detected.matchedAlias && (item.name_th.includes(detected.matchedAlias) || (item.detail && item.detail.includes(detected.matchedAlias)))) {
           keywordScore += 30;
           tokenHits++;
+        }
+
+        // Gemini AI Expanded Semantic Concept Matches
+        for (const token of expandedTokens) {
+          let hit = false;
+          if (item.name_th.toLowerCase().includes(token)) { keywordScore += 45; hit = true; }
+          if (item.hilight && item.hilight.toLowerCase().includes(token)) { keywordScore += 30; hit = true; }
+          if (item.sub_type && item.sub_type.toLowerCase().includes(token)) { keywordScore += 25; hit = true; }
+          if (item.detail && item.detail.toLowerCase().includes(token)) { keywordScore += 20; hit = true; }
+          if (hit) tokenHits++;
         }
 
         // Strict filter: If user provided search brief, item MUST have at least 1 keyword hit
@@ -225,6 +255,7 @@ export async function POST(req: Request) {
       totalMatches,
       totalDatabase: data.length,
       locations: results,
+      geminiAnalysis,
     });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
