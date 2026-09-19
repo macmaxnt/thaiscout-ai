@@ -29,7 +29,7 @@ function calculateTotalDistance(locs: MapLocation[]): number {
   const valid = locs.filter((l) => l.lat && l.lng);
   if (valid.length < 2) return 0;
   let total = 0;
-  const R = 6371; // Earth's radius in km
+  const R = 6371;
   for (let i = 0; i < valid.length - 1; i++) {
     const lat1 = (valid[i].lat! * Math.PI) / 180;
     const lon1 = (valid[i].lng! * Math.PI) / 180;
@@ -98,14 +98,15 @@ export default function InteractiveMap({
     const validLocs = locations.filter((l) => l.lat && l.lng);
     const bounds: [number, number][] = [];
 
+    // Polyline for Recce Points
     const validRecce = scoutingList.filter((l) => l.lat && l.lng);
     if (validRecce.length >= 2) {
       const latLngs = validRecce.map((l) => [l.lat!, l.lng!] as [number, number]);
       routePolylineRef.current = L.polyline(latLngs, {
         color: "#0284c7",
-        weight: 3.5,
+        weight: 4,
         dashArray: "6, 8",
-        opacity: 0.85,
+        opacity: 0.9,
       }).addTo(map);
     }
 
@@ -118,56 +119,81 @@ export default function InteractiveMap({
       const recceIndex = scoutingList.findIndex((x) => x.id === loc.id);
       const isRecce = recceIndex !== -1;
 
-      let bg = isSelected ? "#e11d48" : isRecce ? "#16a34a" : "#7c3aed";
-      let border = isSelected ? "#9f1239" : isRecce ? "#14532d" : "#4c1d95";
-      let label = isRecce ? `#${recceIndex + 1} ${loc.name_th}` : loc.name_th;
-      if (label.length > 18) label = label.slice(0, 16) + "...";
+      // Pin colors & size
+      const size = isSelected ? 38 : isRecce ? 34 : 30;
+      const bg = isSelected ? "#e11d48" : isRecce ? "#16a34a" : "#7c3aed";
+      const border = isSelected ? "#881337" : isRecce ? "#14532d" : "#4c1d95";
+      const badgeText = isRecce ? `#${recceIndex + 1}` : isSelected ? "★" : "📍";
 
-      const iconHtml = `
+      // Teardrop pin design with exact anchoring
+      const pinHtml = `
         <div style="
+          width: ${size}px;
+          height: ${size}px;
           background: ${bg};
-          color: #ffffff;
-          font-family: 'Nunito', 'Mitr', sans-serif;
-          font-weight: 800;
-          font-size: 11px;
-          padding: 3px 8px;
-          border-radius: 9999px;
-          border: 2px solid ${border};
-          box-shadow: ${isSelected ? "3px 3px 0px #000000" : "2px 2px 0px rgba(0,0,0,0.3)"};
-          display: inline-flex;
+          border: 2.5px solid ${border};
+          border-radius: 50% 50% 50% 0;
+          transform: rotate(-45deg);
+          box-shadow: ${isSelected ? "3px 3px 0px #000000" : "2px 2px 0px rgba(0,0,0,0.35)"};
+          display: flex;
           align-items: center;
-          gap: 4px;
-          white-space: nowrap;
+          justify-content: center;
           cursor: pointer;
-          transform: translate(-50%, -100%);
           transition: transform 0.15s ease;
         ">
-          <span>${isRecce ? "🎬" : isSelected ? "🎯" : "📍"}</span>
-          <span>${label}</span>
+          <span style="
+            transform: rotate(45deg);
+            color: #ffffff;
+            font-family: 'Nunito', 'Mitr', sans-serif;
+            font-weight: 900;
+            font-size: ${isRecce ? "12px" : "11px"};
+            text-align: center;
+            line-height: 1;
+          ">${badgeText}</span>
         </div>
       `;
 
       const marker = L.marker([lat, lng], {
         icon: L.divIcon({
-          className: "custom-pin",
-          html: iconHtml,
-          iconSize: [0, 0],
-          iconAnchor: [0, 0],
+          className: "custom-teardrop-pin",
+          html: pinHtml,
+          iconSize: [size, size],
+          iconAnchor: [size / 2, size],
+          popupAnchor: [0, -size - 6],
         }),
+        zIndexOffset: isSelected ? 1000 : isRecce ? 500 : 100,
       });
 
-      const popupContent = document.createElement("div");
-      popupContent.style.padding = "6px 8px";
-      popupContent.innerHTML = `
-        <div style="font-family: 'Nunito', 'Mitr', sans-serif;">
-          <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-bottom: 2px;">${loc.name_th}</div>
-          <div style="font-size: 11px; font-weight: 700; color: #475569; margin-bottom: 4px;">📍 ${loc.province} ${loc.district ? "• อ." + loc.district : ""}</div>
-          ${loc.tel ? `<div style="font-size: 11px; font-weight: 700; color: #d97706; margin-bottom: 6px;">📞 ${loc.tel}</div>` : ""}
-          <div style="font-size: 10px; font-family: monospace; color: #0284c7; font-weight: bold;">GPS: ${lat.toFixed(4)}, ${lng.toFixed(4)}</div>
+      // Hover Tooltip: Clean & non-intrusive
+      marker.bindTooltip(
+        `<div style="font-family:'Nunito','Mitr',sans-serif; font-weight:800; font-size:11px;">${isRecce ? `[จุดที่ ${recceIndex + 1}] ` : ""}${loc.name_th}</div>`,
+        {
+          direction: "top",
+          offset: [0, -size - 4],
+          opacity: 0.95,
+        }
+      );
+
+      // Popup Content: Structured cleanly above the pin
+      const popupDiv = document.createElement("div");
+      popupDiv.style.minWidth = "200px";
+      popupDiv.style.fontFamily = "'Nunito', 'Mitr', sans-serif";
+      popupDiv.innerHTML = `
+        <div style="padding: 2px;">
+          <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-bottom: 2px; line-height: 1.2;">
+            ${loc.name_th}
+          </div>
+          <div style="font-size: 11px; font-weight: 700; color: #475569; margin-bottom: 4px;">
+            📍 ${loc.province} ${loc.district ? "• อ." + loc.district : ""}
+          </div>
+          ${loc.tel ? `<div style="font-size: 11px; font-weight: 800; color: #d97706; margin-bottom: 6px;">📞 ${loc.tel}</div>` : ""}
+          <div style="font-size: 10px; font-family: monospace; color: #0284c7; font-weight: 700;">
+            GPS: ${lat.toFixed(4)}, ${lng.toFixed(4)}
+          </div>
         </div>
       `;
 
-      marker.bindPopup(popupContent);
+      marker.bindPopup(popupDiv);
 
       marker.on("click", () => {
         onSelectLocation(loc);
@@ -182,10 +208,10 @@ export default function InteractiveMap({
 
     if (selectedLocation?.lat && selectedLocation?.lng) {
       map.flyTo([selectedLocation.lat, selectedLocation.lng], 14, {
-        duration: 1.2,
+        duration: 0.8,
       });
     } else if (bounds.length > 0) {
-      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 13 });
+      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 13 });
     }
   }, [locations, selectedLocation, scoutingList]);
 
@@ -215,23 +241,23 @@ export default function InteractiveMap({
   const totalDistance = calculateTotalDistance(scoutingList);
 
   return (
-    <div className="bg-white border-[2.5px] border-[#0284c7] rounded-[24px] shadow-[5px_5px_0px_#0369a1] overflow-hidden flex flex-col h-full sticky top-6">
-      {/* Map Control Bar */}
-      <div className="bg-[#f0f9ff] px-4 py-3 border-b-2 border-[#0284c7] flex flex-wrap items-center justify-between gap-2">
+    <div className="bg-white border-[2.5px] border-[#0284c7] rounded-[24px] shadow-[5px_5px_0px_#0369a1] overflow-hidden flex flex-col h-[calc(100vh-110px)] sticky top-4">
+      {/* Map Control Header */}
+      <div className="bg-[#f0f9ff] px-4 py-2.5 border-b-2 border-[#0284c7] flex flex-wrap items-center justify-between gap-2 shrink-0">
         <div className="flex items-center gap-2">
-          <span className="bg-[#bae6fd] border border-[#0284c7] rounded-lg px-2.5 py-0.5 text-xs font-black text-[#0c4a6e]">
+          <span className="bg-[#bae6fd] border border-[#0284c7] rounded-lg px-2 py-0.5 text-xs font-black text-[#0c4a6e]">
             🗺️ Live Map
           </span>
           <span className="text-xs font-black text-[#0c4a6e]">
-            {locations.filter((l) => l.lat && l.lng).length} พิกัด
+            {locations.filter((l) => l.lat && l.lng).length} หมุดพิกัด
           </span>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={handleFitAll}
-            className="btn btn-blue text-[11px] px-3 py-1 rounded-lg font-black"
-            title="ซูมออกให้เห็นหมุดทั้งหมด เพื่อดูระยะห่าง"
+            className="btn btn-blue text-xs px-3 py-1 rounded-xl font-black"
+            title="ซูมออกดูระยะห่างของหมุดทั้งหมด"
           >
             🔍 ซูมดูทั้งหมด
           </button>
@@ -241,17 +267,17 @@ export default function InteractiveMap({
               href={googleMapsUrl}
               target="_blank"
               rel="noreferrer"
-              className="btn btn-mint text-[11px] px-3 py-1 rounded-lg font-black"
+              className="btn btn-mint text-xs px-3 py-1 rounded-xl font-black"
             >
-              🚀 นำทาง
+              🚀 เปิด Route
             </a>
           )}
         </div>
       </div>
 
-      {/* Selected Location Banner */}
+      {/* Selected Location Pill */}
       {selectedLocation && (
-        <div className="bg-white px-4 py-2 border-b border-slate-200 flex items-center justify-between text-xs">
+        <div className="bg-white px-4 py-2 border-b border-slate-200 flex items-center justify-between text-xs shrink-0">
           <div className="flex items-center gap-1.5 truncate">
             <span className="text-rose-600 font-bold shrink-0">🎯 ปักจุด:</span>
             <span className="font-black text-slate-900 truncate">
@@ -260,18 +286,18 @@ export default function InteractiveMap({
           </div>
           <button
             onClick={() => onToggleScout(selectedLocation)}
-            className="btn btn-mint text-[10px] px-2.5 py-0.5 rounded-md font-black shrink-0"
+            className="btn btn-mint text-[11px] px-2.5 py-0.5 rounded-lg font-black shrink-0"
           >
             {scoutingList.some((x) => x.id === selectedLocation.id) ? "✓ ปักแล้ว" : "+ ปักหมุด"}
           </button>
         </div>
       )}
 
-      {/* Recce Polyline info */}
+      {/* Recce Distance Bar */}
       {validRecce.length >= 2 && (
-        <div className="bg-[#fffbeb] px-4 py-1.5 border-b border-[#fef08a] flex items-center justify-between text-[11px] text-[#78350f] font-bold">
+        <div className="bg-[#fffbeb] px-4 py-1.5 border-b border-[#fef08a] flex items-center justify-between text-[11px] text-[#78350f] font-bold shrink-0">
           <span>
-            📍 เส้นทางสำรวจ {validRecce.length} จุด (เส้นประสีฟ้า)
+            📍 เส้นทางสำรวจ {validRecce.length} จุด (เส้นประฟ้า)
           </span>
           <span className="font-black font-mono">
             ~{totalDistance} กม.
@@ -279,8 +305,8 @@ export default function InteractiveMap({
         </div>
       )}
 
-      {/* Leaflet Container */}
-      <div className="relative flex-1 w-full min-h-[480px] h-[calc(100vh-220px)] max-h-[720px]">
+      {/* Map Body */}
+      <div className="relative flex-1 w-full h-full min-h-[350px]">
         <div ref={mapContainerRef} className="w-full h-full" />
       </div>
     </div>
