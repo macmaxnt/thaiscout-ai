@@ -123,7 +123,7 @@ export default function InteractiveMap({
           <span style="
             transform: rotate(45deg);
             color: #ffffff;
-            font-family: 'DM Sans', 'Mitr', sans-serif;
+            font-family: 'Noto Sans Thai', sans-serif;
             font-weight: 900;
             font-size: ${isRecce ? "12px" : "11px"};
             text-align: center;
@@ -145,7 +145,7 @@ export default function InteractiveMap({
 
       // Hover Tooltip: Clean & non-intrusive
       const tooltip = document.createElement("div");
-      tooltip.style.fontFamily = "'DM Sans', 'Mitr', sans-serif";
+      tooltip.style.fontFamily = "'Noto Sans Thai', sans-serif";
       tooltip.style.fontWeight = "800";
       tooltip.style.fontSize = "11px";
       tooltip.textContent = `${isRecce ? `[จุดที่ ${recceIndex + 1}] ` : ""}${loc.name_th}`;
@@ -158,7 +158,7 @@ export default function InteractiveMap({
       // Popup Content: Structured cleanly above the pin
       const popupDiv = document.createElement("div");
       popupDiv.style.minWidth = "200px";
-      popupDiv.style.fontFamily = "'DM Sans', 'Mitr', sans-serif";
+      popupDiv.style.fontFamily = "'Noto Sans Thai', sans-serif";
       popupDiv.style.padding = "2px";
       const createPopupLine = (text: string, style: Partial<CSSStyleDeclaration>) => {
         const line = document.createElement("div");

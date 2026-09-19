@@ -13,18 +13,18 @@ colors:
   line: "rgba(40,81,133,.18)"
 typography:
   display:
-    fontFamily: "DM Serif Display, Mitr, serif"
+    fontFamily: "Noto Serif Thai, serif"
     fontSize: "clamp(29px, 3.05vw, 47px)"
     fontWeight: 400
     lineHeight: 0.99
     letterSpacing: "-0.045em"
   body:
-    fontFamily: "DM Sans, Mitr, sans-serif"
+    fontFamily: "Noto Sans Thai, sans-serif"
     fontSize: "14px"
     fontWeight: 400
     lineHeight: 1.55
   label:
-    fontFamily: "DM Sans, Mitr, sans-serif"
+    fontFamily: "Noto Sans Thai, sans-serif"
     fontSize: "10px"
     fontWeight: 800
     letterSpacing: "0.08em"
@@ -64,6 +64,12 @@ components:
     typography: "{typography.label}"
     rounded: "{rounded.control}"
     padding: "7px 9px"
+  button-selected-detail:
+    backgroundColor: "#ffffff"
+    textColor: "{colors.blue}"
+    typography: "{typography.label}"
+    rounded: "7px"
+    padding: "5px 8px"
   field-brief:
     backgroundColor: "#ffffff"
     textColor: "{colors.ink}"
@@ -129,11 +135,11 @@ The palette separates the working sheet, spatial map, current action, and commit
 
 ## Typography
 
-**Display Font:** DM Serif Display with Mitr and a serif fallback.
+**Display Font:** Noto Serif Thai with a serif fallback.
 
-**Body Font:** DM Sans with Mitr and a sans-serif fallback.
+**Body Font:** Noto Sans Thai with a system sans-serif fallback.
 
-**Character:** The serif/sans pairing separates the director’s visual intention from the scout’s operational notes. Mitr keeps Thai language coverage coherent in both roles; labels stay dense, direct, and mostly uppercase only for compact English system language.
+**Character:** The serif/sans pairing separates the director’s visual intention from the scout’s operational notes. The Noto Thai family keeps Thai language coverage coherent in both roles; labels stay dense, direct, and mostly uppercase only for compact English system language.
 
 ### Hierarchy
 
@@ -144,7 +150,7 @@ The palette separates the working sheet, spatial map, current action, and commit
 - **Metadata** (650–750, 10–12px, normal): Province, count, short explanations, and controls.
 - **Label** (800, 8–10px, tracked 0.06–0.13em): Overlines, source status, map labels, and dock labels. Use compact uppercase English labels only where they function as system metadata.
 
-**The Treatment-Then-Call-Sheet Rule.** Use display type for the creative proposition and DM Sans/Mitr for every task, status, fact, or control. Do not promote raw metadata to editorial display type.
+**The Treatment-Then-Call-Sheet Rule.** Use Noto Serif Thai for the creative proposition and Noto Sans Thai for every task, status, fact, map label, or control. Do not promote raw metadata to editorial display type.
 
 ## Layout
 
@@ -189,6 +195,7 @@ The brief field is the creative-to-operational handoff. It is a white 14px-radiu
 - **Search:** Call Sheet Orange fill, white 12px/800 text, asymmetric 8px/3px folded corner, 9px × 13px padding, and an orange 4px printed edge. Hover rises 2px and extends that edge to 6px; active settles 2px with a 2px edge. Disabled state uses `opacity: .65` and `cursor: wait`.
 - **Utility / Ask AI:** White with a subtle blue border and Scout Blue icon/text. Hover fills Scout Blue and reverses to white. The square utility action is 36px on desktop and at least 44px on mobile.
 - **Save Recce:** Starts as a white outlined control. On save, it switches to solid Recce Wine with white text and retains its position/index, so the state reads as commitment rather than a transient success toast.
+- **Selected details:** A persistent white, blue-outlined `รายละเอียดที่เลือก` control sits beside the result summary. It opens the selected location’s existing dossier modal directly from the list pane, so the map dock is an additional route rather than the only way to inspect the selection. It is disabled until a location is selected; at rest it has a 30px target with 5px × 8px padding, then a Scout Blue fill/white text on hover. On small screens it grows to 38px.
 - **Dock action:** Scout Blue solid action on the map dock; it drops its text on small screens only after retaining a 44px icon target and an accessible name.
 
 ### Chips
@@ -201,7 +208,7 @@ The workspace itself is the main container. Location results are 12px-radius row
 
 ### Location Result
 
-Each row is a two-column decision unit: an indexed main button on the left and explicit AI/save controls on the right. Keep the title to one line, metadata compact, the insight to two lines, and tag facts beneath it. Selection sets `aria-pressed`; saving changes both the row button and map pin/route state. The ranking number, match score, selected visual state, recce index, and map pin must all agree.
+Each row is a two-column decision unit: an indexed main button on the left and explicit AI/save controls on the right. Keep the title to one line, metadata compact, the insight to two lines, and tag facts beneath it. Selection sets `aria-pressed`; saving changes both the row button and map pin/route state. The persistent selected-details control in the result summary must always target that same selected row and remain disabled when there is no selection. The ranking number, match score, selected visual state, recce index, and map pin must all agree.
 
 ### Map System
 
@@ -209,7 +216,7 @@ The Leaflet canvas is a live work surface, not a decorative image. Blue pins are
 
 ### Location Dossier Modal
 
-The AI detail surface is a full-viewport dossier (`z-index: 2000`) so Leaflet controls, pins, and popups can never layer above it. It has no outer padding, backdrop frame, or exposed map gutter: warm paper fills the viewport. A 270px mist sidebar keeps the creative brief, source facts, coordinates, contact detail, and grounding warning visible, while the scrollable main column holds source description, cinematic read, logistics, permits, and grounded Q&A. On small screens, the sidebar becomes a two-column facts strip above the document. Escape and the clearly labelled close control dismiss the dossier; opening moves focus to close, Tab is contained inside the dialog, and dismissal restores focus to the invoker. Failure states offer an explicit retry rather than requiring dismissal and reopening.
+The AI detail surface is a centered desktop dossier modal (`z-index: 2000`) above a dark Deep Coordinate Blue backdrop (`rgba(25,58,97,.52)`), so Leaflet controls, pins, and popups can never layer above it. It is at most 1100px wide and 760px tall, or `calc(100dvh - 64px)` when the viewport is shorter; the surrounding 32px inset deliberately keeps the workspace context visible. The warm-paper modal has a 16px radius and a `0 24px 60px rgba(15,35,57,.3)` lift. A 270px mist sidebar keeps the creative brief, source facts, coordinates, contact detail, and grounding warning visible, while the scrollable main column holds source description, cinematic read, logistics, permits, and grounded Q&A. At 760px and below, the overlay bottom-aligns the modal with a 12px outer inset; the modal height becomes at most 820px or `calc(100dvh - 24px)`, and the sidebar becomes a two-column facts strip above the document. Escape and the clearly labelled close control dismiss the dossier; opening moves focus to close, Tab is contained inside the dialog, and dismissal restores focus to the invoker. Failure states offer an explicit retry rather than requiring dismissal and reopening.
 
 ### Loading, Empty, and Error States
 
@@ -221,7 +228,7 @@ Use short, mechanical state feedback: `.15–.18s ease` for row, chip, and contr
 
 ### Accessibility
 
-All controls retain native semantic elements and visible keyboard focus: a 3px Call Sheet Orange outline offset by 3px. Every icon-only action has an accessible name; the brief has a visually hidden label; list updates are announced with `aria-live="polite"`; search errors use `role="alert"`; view/result selection uses `aria-pressed`; and map, workspace, and view switcher have descriptive accessible labels. Maintain readable Navy/Ink text on paper and white, do not convey selected/saved/ordinary map status by color alone (use selected state, numbering, labels, and route semantics), and preserve the 44px mobile target rules.
+All controls retain native semantic elements and visible keyboard focus: a 3px Call Sheet Orange outline offset by 3px. Every icon-only action has an accessible name; the brief has a visually hidden label; list updates are announced with `aria-live="polite"`; search errors use `role="alert"`; view/result selection uses `aria-pressed`; and map, workspace, and view switcher have descriptive accessible labels. The persistent selected-details control uses native disabled semantics until a location is selected, and returns focus through the existing dossier dialog flow. Maintain readable Navy/Ink text on paper and white, do not convey selected/saved/ordinary map status by color alone (use selected state, numbering, labels, and route semantics), and preserve the 44px mobile target rules where the implementation permits.
 
 ## Do's and Don'ts
 
