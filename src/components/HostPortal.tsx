@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { 
   Building2, Home, PlusCircle, CheckCircle2, Sparkles, MapPin, 
   Phone, Zap, Truck, DollarSign, Trash2, ArrowRight, ShieldCheck, 
-  Camera, Eye, Layers, AlertCircle
+  Camera, Eye, Layers, AlertCircle, Mail
 } from "lucide-react";
 import ProvinceSelector from "@/components/ProvinceSelector";
 
@@ -34,6 +34,8 @@ export default function HostPortal({
   const [hilight, setHilight] = useState("");
   const [detail, setDetail] = useState("");
   const [tel, setTel] = useState("");
+  const [email, setEmail] = useState("");
+  const [facebook, setFacebook] = useState("");
   const [isAiGenerating, setIsAiGenerating] = useState(false);
   const [successNotice, setSuccessNotice] = useState(false);
 
@@ -52,6 +54,8 @@ export default function HostPortal({
       hilight: "สถาปัตยกรรมไม้สักทองโบราณริมแม่น้ำเจ้าพระยา บรรยากาศขลัง แสงเช้า-เย็นสะท้อนผิวน้ำสวยมาก",
       detail: "เรือนไทยหมู่โบราณ ใต้ถุนโล่ง ลานกว้างริมน้ำ มีท่าเรือส่วนตัว เหมาะกับกองถ่ายละครพีเรียด ซีนดราม่า และมิวสิควิดีโอ",
       tel: "081-999-1234",
+      email: "contact@ayutthayavintage.com",
+      facebook: "facebook.com/AyutthayaVintageHouse",
     },
     {
       title: "🏭 โกดังเก่าดิบสไตล์ Industrial",
@@ -67,6 +71,8 @@ export default function HostPortal({
       hilight: "กำแพงอิฐเปลือย โครงสร้างเหล็กดิบ แสงส่องทะลุหน้าต่างกระจก เหมาะกับซีนแอ็กชัน และถ่าย MV แฟชั่น",
       detail: "โกดังริมแม่น้ำพื้นที่ 1,200 ตร.ม. โปร่ง ไร้เสากลาง มีห้องแต่งตัวนักแสดงและห้องน้ำพร้อมแอร์",
       tel: "089-888-5678",
+      email: "production@rawwarehouse-sp.com",
+      facebook: "facebook.com/RawWarehouseStudio",
     },
     {
       title: "☕ คาเฟ่เรือนกระจกกลางสวนป่า",
@@ -82,6 +88,8 @@ export default function HostPortal({
       hilight: "สไตล์ Glasshouse โปร่ง แสงธรรมชาติ 360 องศา ล้อมรอบด้วยเฟิร์นและต้นไม้ใหญ่ เหมาะกับหนังรักโรแมนติก",
       detail: "คาเฟ่สไตล์นอร์ดิกผสมสวนทรอปิคอล มีมุมถ่ายทั้ง indoor และ outdoor ปิดร้านให้ถ่ายทำเฉพาะวันจันทร์-พุธ",
       tel: "095-777-9012",
+      email: "hello@glasshouse-cafe.com",
+      facebook: "facebook.com/GlasshousePineCafe",
     },
   ];
 
@@ -99,6 +107,8 @@ export default function HostPortal({
     setHilight(p.hilight);
     setDetail(p.detail);
     setTel(p.tel);
+    setEmail(p.email || "");
+    setFacebook(p.facebook || "");
   };
 
   const handleAiAutoTag = () => {
@@ -135,6 +145,8 @@ export default function HostPortal({
       lat: parseFloat(lat) || 18.7883,
       lng: parseFloat(lng) || 98.9853,
       tel: tel || "ติดต่อผ่านระบบ ThaiScout",
+      email: email || "host@thaiscout.local",
+      facebook: facebook || "",
       hilight,
       detail: detail || "สถานที่พร้อมเปิดให้กองถ่ายทำภาพยนตร์ โฆษณา และมิวสิควิดีโอเช่าพื้นที่",
       isCustomHost: true,
@@ -143,6 +155,8 @@ export default function HostPortal({
         power,
         parking,
         dronePolicy,
+        email,
+        facebook,
       },
     };
 
@@ -372,6 +386,39 @@ export default function HostPortal({
                 </div>
               </div>
 
+              {/* Email & Facebook Fields */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-black text-slate-700 mb-1 flex items-center gap-1">
+                    <Mail className="w-3.5 h-3.5 text-sky-600" />
+                    <span>อีเมลติดต่อ (Email)</span>
+                  </label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="เช่น location.contact@gmail.com"
+                    className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#0284c7]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-black text-slate-700 mb-1 flex items-center gap-1">
+                    <svg className="w-3.5 h-3.5 text-[#1877F2] fill-current" viewBox="0 0 24 24">
+                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                    </svg>
+                    <span>เพจ Facebook (Facebook Page)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={facebook}
+                    onChange={(e) => setFacebook(e.target.value)}
+                    placeholder="เช่น facebook.com/myvenue หรือ @myvenue"
+                    className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#0284c7]"
+                  />
+                </div>
+              </div>
+
               <div>
                 <label className="block text-[11px] font-black text-slate-700 mb-1 flex items-center gap-1">
                   <Zap className="w-3.5 h-3.5 text-amber-600" />
@@ -518,6 +565,20 @@ export default function HostPortal({
                           <Phone className="w-3 h-3 text-emerald-600 shrink-0" />
                           <span className="font-mono font-bold text-emerald-700">{loc.tel}</span>
                         </div>
+                        {(loc.email || loc.productionSpecs?.email) && (
+                          <div className="flex items-center gap-1 text-sky-700">
+                            <Mail className="w-3 h-3 text-sky-600 shrink-0" />
+                            <span className="truncate">{loc.email || loc.productionSpecs?.email}</span>
+                          </div>
+                        )}
+                        {(loc.facebook || loc.productionSpecs?.facebook) && (
+                          <div className="flex items-center gap-1 text-[#1877F2]">
+                            <svg className="w-3 h-3 fill-current shrink-0" viewBox="0 0 24 24">
+                              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                            </svg>
+                            <span className="truncate">{loc.facebook || loc.productionSpecs?.facebook}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
 

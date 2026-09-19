@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { 
   Clapperboard, Search, MapPin, Phone, Clock, AlertTriangle, 
   CheckCircle2, Sparkles, Navigation, Share2, Compass, Film, ExternalLink,
-  Sliders, Layers, ShieldCheck, Route, Eye, Home as HomeIcon, Zap, Building2
+  Sliders, Layers, ShieldCheck, Route, Eye, Home as HomeIcon, Zap, Building2, Mail
 } from "lucide-react";
 
 import RagModal from "@/components/RagModal";
@@ -47,6 +47,8 @@ export default function Home() {
       lat: 14.3532,
       lng: 100.5684,
       tel: "081-999-1234 (คุณสมชาย)",
+      email: "contact@ayutthayavintage.com",
+      facebook: "facebook.com/AyutthayaVintageHouse",
       hilight: "✨ สถาปัตยกรรมไม้สักทองโบราณริมแม่น้ำเจ้าพระยา แสงเช้า-เย็นสะท้อนผิวน้ำสวยมาก",
       detail: "เรือนไทยหมู่โบราณ ใต้ถุนโล่ง ลานกว้างริมน้ำ มีท่าเรือส่วนตัว เหมาะกับกองถ่ายละครพีเรียด ซีนดราม่า และมิวสิควิดีโอ พร้อมห้องแต่งตัวติดแอร์",
       isCustomHost: true,
@@ -55,6 +57,8 @@ export default function Home() {
         power: "ไฟบ้าน 30A พร้อมจุดต่อไฟ 3 เฟสริมน้ำ",
         parking: "ลานดินกว้าง จอดรถตู้ 8 คัน รถปั่นไฟ 1 คัน",
         dronePolicy: "อนุญาตบินโดรนถ่ายผิวน้ำและตัวเรือน",
+        email: "contact@ayutthayavintage.com",
+        facebook: "facebook.com/AyutthayaVintageHouse",
       },
     },
     {
@@ -67,6 +71,8 @@ export default function Home() {
       lat: 13.6580,
       lng: 100.5340,
       tel: "089-888-5678 (คุณมานพ)",
+      email: "production@rawwarehouse-sp.com",
+      facebook: "facebook.com/RawWarehouseStudio",
       hilight: "🔥 กำแพงอิฐเปลือย โครงสร้างเหล็กดิบ แสงส่องทะลุหน้าต่างกระจก เหมาะกับซีนแอ็กชัน",
       detail: "โกดังริมแม่น้ำพื้นที่ 1,200 ตร.ม. โปร่ง ไร้เสากลาง รองรับการแขวนไฟ Rigging และมุมกล้อง Top View เหมาะกับโฆษณาและ MV แฟชั่น",
       isCustomHost: true,
@@ -75,6 +81,8 @@ export default function Home() {
         power: "ไฟฟ้าอุตสาหกรรม 100A รองรับไฟสตูดิโอขนาดใหญ่",
         parking: "ลานคอนกรีตขนาดใหญ่ จอดรถเทรลเลอร์และรถกองถ่ายได้กว่า 20 คัน",
         dronePolicy: "บินโดรนภายในโกดังเพดานสูง 10 เมตรได้",
+        email: "production@rawwarehouse-sp.com",
+        facebook: "facebook.com/RawWarehouseStudio",
       },
     },
   ]);
@@ -501,9 +509,56 @@ export default function Home() {
                         {loc.tel && (
                           <div className="flex items-center gap-1.5">
                             <Phone className="w-4 h-4 text-amber-600 shrink-0" />
-                            <span className="font-mono font-bold text-amber-800">{loc.tel}</span>
+                            <a 
+                              href={`tel:${loc.tel.replace(/[^0-9]/g, "")}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="font-mono font-bold text-amber-800 hover:underline"
+                              title="คลิกเพื่อโทรออก"
+                            >
+                              {loc.tel}
+                            </a>
                           </div>
                         )}
+
+                        {/* Email Contact */}
+                        <div className="flex items-center gap-1.5">
+                          <Mail className="w-4 h-4 text-sky-600 shrink-0" />
+                          <a
+                            href={`mailto:${loc.email || loc.productionSpecs?.email || "saraban@tat.or.th"}?subject=${encodeURIComponent(`ขออนุญาตถ่ายทำภาพยนตร์/โฆษณา: ${loc.name_th} (${loc.province})`)}&body=${encodeURIComponent(`เรียน ผู้ดูแลสถานที่ ${loc.name_th} (${loc.province})\n\nข้าพเจ้าในนามกองถ่าย/ผู้ผลิต มีความประสงค์จะสอบถามขั้นตอนและขออนุญาตใช้สถานที่ถ่ายทำ...\n\nสถานที่: ${loc.name_th}\nจังหวัด: ${loc.province}\n\nจึงเรียนมาเพื่อโปรดพิจารณา`)}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="font-bold text-sky-700 hover:text-sky-950 hover:underline truncate"
+                            title="คลิกเพื่อเปิดอีเมลร่างจดหมายขออนุญาตถ่ายทำ"
+                          >
+                            {loc.email || loc.productionSpecs?.email || "อีเมล: ติดต่อขออนุญาตถ่ายทำ (Mailto) ✉️"}
+                          </a>
+                        </div>
+
+                        {/* Facebook Page */}
+                        <div className="flex items-center gap-1.5">
+                          <svg className="w-4 h-4 text-[#1877F2] shrink-0 fill-current" viewBox="0 0 24 24">
+                            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                          </svg>
+                          <a
+                            href={
+                              loc.facebook?.startsWith("http")
+                                ? loc.facebook
+                                : loc.facebook
+                                ? `https://${loc.facebook}`
+                                : loc.productionSpecs?.facebook?.startsWith("http")
+                                ? loc.productionSpecs.facebook
+                                : loc.productionSpecs?.facebook
+                                ? `https://${loc.productionSpecs.facebook}`
+                                : `https://www.facebook.com/search/top?q=${encodeURIComponent(loc.name_th + ' ' + loc.province)}`
+                            }
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="font-bold text-[#1877F2] hover:text-blue-900 hover:underline flex items-center gap-1 truncate"
+                            title="คลิกเพื่อเปิดเพจ Facebook ของสถานที่"
+                          >
+                            <span>{loc.facebook || loc.productionSpecs?.facebook || `Facebook: เพจ ${loc.name_th} ↗`}</span>
+                          </a>
+                        </div>
 
                         {/* Permit Caution / Host Verified Badge */}
                         {loc.isCustomHost ? (
