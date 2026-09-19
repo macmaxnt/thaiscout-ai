@@ -23,6 +23,9 @@ interface InteractiveMapProps {
   scoutingList: MapLocation[];
   onSelectLocation: (loc: MapLocation) => void;
   onToggleScout: (loc: MapLocation) => void;
+  onClearScout?: () => void;
+  filterOnlyPinned?: boolean;
+  onToggleFilterOnlyPinned?: () => void;
 }
 
 function calculateTotalDistance(locs: MapLocation[]): number {
@@ -52,6 +55,9 @@ export default function InteractiveMap({
   scoutingList,
   onSelectLocation,
   onToggleScout,
+  onClearScout,
+  filterOnlyPinned = false,
+  onToggleFilterOnlyPinned,
 }: InteractiveMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -95,7 +101,8 @@ export default function InteractiveMap({
       routePolylineRef.current = null;
     }
 
-    const validLocs = locations.filter((l) => l.lat && l.lng);
+    const locsToRender = filterOnlyPinned ? scoutingList : locations;
+    const validLocs = locsToRender.filter((l) => l.lat && l.lng);
     const bounds: [number, number][] = [];
 
     // Polyline for Recce Points
@@ -213,12 +220,13 @@ export default function InteractiveMap({
     } else if (bounds.length > 0) {
       map.fitBounds(bounds, { padding: [40, 40], maxZoom: 13 });
     }
-  }, [locations, selectedLocation, scoutingList]);
+  }, [locations, selectedLocation, scoutingList, filterOnlyPinned]);
 
   const handleFitAll = () => {
     const map = mapInstanceRef.current;
     if (!map) return;
-    const valid = locations.filter((l) => l.lat && l.lng);
+    const locsToFit = filterOnlyPinned ? scoutingList : locations;
+    const valid = locsToFit.filter((l) => l.lat && l.lng);
     if (valid.length === 0) return;
     const bounds = valid.map((l) => [l.lat!, l.lng!] as [number, number]);
     map.fitBounds(bounds, { padding: [50, 50], maxZoom: 13 });
@@ -243,14 +251,52 @@ export default function InteractiveMap({
   return (
     <div className="bg-white border-[2.5px] border-[#0284c7] rounded-[24px] shadow-[5px_5px_0px_#0369a1] overflow-hidden flex flex-col h-[calc(100vh-110px)] sticky top-4">
       {/* Map Control Header */}
-      <div className="bg-[#f0f9ff] px-4 py-2.5 border-b-2 border-[#0284c7] flex flex-wrap items-center justify-between gap-2 shrink-0">
-        <div className="flex items-center gap-2">
+      <div className="bg-[#f0f9ff] px-3.5 py-2.5 border-b-2 border-[#0284c7] flex flex-wrap items-center justify-between gap-2 shrink-0">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="bg-[#bae6fd] border border-[#0284c7] rounded-lg px-2 py-0.5 text-xs font-black text-[#0c4a6e]">
             🗺️ Live Map
           </span>
           <span className="text-xs font-black text-[#0c4a6e]">
-            {locations.filter((l) => l.lat && l.lng).length} หมุดพิกัด
+            {filterOnlyPinned
+              ? `📌 ${scoutingList.filter((l) => l.lat && l.lng).length} จุดที่ปักไว้`
+              : `${locations.filter((l) => l.lat && l.lng).length} หมุดพิกัด`}
           </span>
+
+          {/* Filter only pinned toggle */}
+          {onToggleFilterOnlyPinned && (
+            <button
+              onClick={onToggleFilterOnlyPinned}
+              disabled={scoutingList.length === 0}
+              className={`btn text-xs px-2.5 py-1 rounded-xl font-black flex items-center gap-1 transition ${
+                filterOnlyPinned
+                  ? "bg-[#f43f5e] border-[#be123c] text-white shadow-[2px_2px_0px_#881337]"
+                  : scoutingList.length > 0
+                  ? "bg-white border-[#f43f5e] text-[#be123c] hover:bg-rose-50 shadow-[2px_2px_0px_#f43f5e]"
+                  : "bg-slate-100 border-slate-300 text-slate-400 cursor-not-allowed opacity-60"
+              }`}
+              title={scoutingList.length === 0 ? "ยังไม่มีหมุดที่ปักไว้" : "สลับแสดงเฉพาะจุดที่ปักหมุด"}
+            >
+              <span>{filterOnlyPinned ? "🗺️ แสดงทั้งหมด" : "📌 เฉพาะที่ปักหมุด"}</span>
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                  filterOnlyPinned ? "bg-white text-rose-700" : "bg-rose-100 text-rose-800"
+                }`}
+              >
+                {scoutingList.length}
+              </span>
+            </button>
+          )}
+
+          {/* Clear pins button */}
+          {onClearScout && scoutingList.length > 0 && (
+            <button
+              onClick={onClearScout}
+              className="btn text-xs px-2.5 py-1 rounded-xl font-black bg-white hover:bg-rose-50 border border-rose-300 text-rose-700 shadow-[2px_2px_0px_#fca5a5] flex items-center gap-1 transition"
+              title="ล้างหมุดสำรวจทั้งหมด"
+            >
+              <span>🗑️ ล้างหมุด</span>
+            </button>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -294,14 +340,36 @@ export default function InteractiveMap({
       )}
 
       {/* Recce Distance Bar */}
-      {validRecce.length >= 2 && (
+      {validRecce.length >= 1 && (
         <div className="bg-[#fffbeb] px-4 py-1.5 border-b border-[#fef08a] flex items-center justify-between text-[11px] text-[#78350f] font-bold shrink-0">
-          <span>
-            📍 เส้นทางสำรวจ {validRecce.length} จุด (เส้นประฟ้า)
-          </span>
-          <span className="font-black font-mono">
-            ~{totalDistance} กม.
-          </span>
+          <div className="flex items-center gap-2">
+            <span>
+              📍 เส้นทางสำรวจ {validRecce.length} จุด (เส้นประฟ้า)
+            </span>
+            {validRecce.length >= 2 && (
+              <span className="font-black font-mono">
+                ~{totalDistance} กม.
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {onToggleFilterOnlyPinned && (
+              <button
+                onClick={onToggleFilterOnlyPinned}
+                className="hover:underline text-amber-900 font-bold"
+              >
+                {filterOnlyPinned ? "← แสดงหมุดทั้งหมด" : "กรองเฉพาะหมุดนี้"}
+              </button>
+            )}
+            {onClearScout && (
+              <button
+                onClick={onClearScout}
+                className="hover:underline text-rose-700 font-bold flex items-center gap-0.5"
+              >
+                🗑️ ล้างหมุด
+              </button>
+            )}
+          </div>
         </div>
       )}
 

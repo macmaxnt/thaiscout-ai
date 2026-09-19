@@ -33,6 +33,7 @@ export default function Home() {
   const [scoutingList, setScoutingList] = useState<any[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<any | null>(null);
   const [mapPinSelectedId, setMapPinSelectedId] = useState<string | null>(null);
+  const [filterOnlyPinned, setFilterOnlyPinned] = useState(false);
   const [ragTargetLocation, setRagTargetLocation] = useState<any | null>(null);
   const [currentMode, setCurrentMode] = useState<"scout" | "host">("scout");
   const [activeTab, setActiveTab] = useState<"search" | "scout">("search");
@@ -120,6 +121,7 @@ export default function Home() {
   const handleSearch = async (targetBrief = brief, targetProv = province) => {
     setLoading(true);
     setMapPinSelectedId(null);
+    setFilterOnlyPinned(false);
     // Auto-detect province if brief contains province name/alias
     let provToSend = targetProv;
     if (targetProv === "all") {
@@ -155,10 +157,20 @@ export default function Home() {
 
   const toggleScout = (item: any) => {
     if (scoutingList.find((x) => x.id === item.id)) {
-      setScoutingList(scoutingList.filter((x) => x.id !== item.id));
+      const updated = scoutingList.filter((x) => x.id !== item.id);
+      setScoutingList(updated);
+      if (updated.length === 0) {
+        setFilterOnlyPinned(false);
+      }
     } else {
       setScoutingList([...scoutingList, item]);
     }
+  };
+
+  const handleClearScout = () => {
+    if (scoutingList.length === 0) return;
+    setScoutingList([]);
+    setFilterOnlyPinned(false);
   };
 
   // Card click on the side: only highlights and centers on map, does NOT reorder list
@@ -192,7 +204,11 @@ export default function Home() {
 
   const cardsTopRef = useRef<HTMLDivElement>(null);
 
-  const rawList = activeTab === "search" ? [...matchingCustom, ...results] : scoutingList;
+  const rawList = filterOnlyPinned
+    ? scoutingList
+    : activeTab === "search"
+    ? [...matchingCustom, ...results]
+    : scoutingList;
 
   // Only float to index 0 when selected specifically from map pin
   const displayedLocations = useMemo(() => {
@@ -265,22 +281,38 @@ export default function Home() {
         {currentMode === "scout" && (
           <div className="flex items-center gap-2 flex-wrap">
             <button
-              onClick={() => setActiveTab("search")}
+              onClick={() => {
+                setActiveTab("search");
+                setFilterOnlyPinned(false);
+              }}
               className={`btn px-3 py-1.5 rounded-xl text-xs font-black ${
-                activeTab === "search" ? "btn-blue" : "btn-purple opacity-70 hover:opacity-100"
+                activeTab === "search" && !filterOnlyPinned ? "btn-blue" : "btn-purple opacity-70 hover:opacity-100"
               }`}
             >
-              🔍 ค้นหา ({displayedLocations.length})
+              🔍 ค้นหา ({[...matchingCustom, ...results].length})
             </button>
 
             <button
-              onClick={() => setActiveTab("scout")}
+              onClick={() => {
+                setActiveTab("scout");
+                setFilterOnlyPinned(false);
+              }}
               className={`btn px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 ${
-                activeTab === "scout" ? "btn-mint" : "btn-purple opacity-70 hover:opacity-100"
+                activeTab === "scout" && !filterOnlyPinned ? "btn-mint" : "btn-purple opacity-70 hover:opacity-100"
               }`}
             >
               🎬 Recce Board ({scoutingList.length})
             </button>
+
+            {scoutingList.length > 0 && (
+              <button
+                onClick={handleClearScout}
+                className="btn text-xs px-2.5 py-1.5 rounded-xl font-black bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-700 shadow-[2px_2px_0px_#fca5a5] flex items-center gap-1 transition"
+                title="ล้างหมุดทั้งหมดในรายการ"
+              >
+                🗑️ ล้างหมุด ({scoutingList.length})
+              </button>
+            )}
           </div>
         )}
       </header>
@@ -399,16 +431,61 @@ export default function Home() {
 
           </div>
 
-          {/* System Boundary Bar */}
+          {/* System Boundary Bar & Quick Filter Controls */}
           <div className="px-4 py-2.5 bg-[#f0f9ff] border-2 border-[#0284c7] rounded-xl shadow-[3px_3px_0px_#0369a1] text-[#0c4a6e] font-bold text-xs sm:text-sm flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="bg-[#bae6fd] border border-[#0284c7] rounded-lg px-2 py-0.5 text-xs font-black">
                 TAT Grounding
               </span>
-              <span className="font-semibold text-slate-800">8,628 พิกัดจริงในดาต้าเบส · ครอบคลุม 77 จังหวัดทั่วไทย</span>
+              <span className="font-semibold text-slate-800 hidden sm:inline">8,628 พิกัดจริงในดาต้าเบส</span>
+
+              {/* Filter only pinned toggle */}
+              <button
+                onClick={() => {
+                  if (scoutingList.length > 0) {
+                    setFilterOnlyPinned(!filterOnlyPinned);
+                  }
+                }}
+                disabled={scoutingList.length === 0}
+                className={`btn text-xs px-2.5 py-1 rounded-xl font-black flex items-center gap-1.5 transition ${
+                  filterOnlyPinned
+                    ? "bg-[#f43f5e] border-[#be123c] text-white shadow-[2px_2px_0px_#881337]"
+                    : scoutingList.length > 0
+                    ? "bg-white border-[#f43f5e] text-[#be123c] hover:bg-rose-50 shadow-[2px_2px_0px_#f43f5e]"
+                    : "bg-slate-100 border-slate-300 text-slate-400 cursor-not-allowed opacity-60"
+                }`}
+                title={scoutingList.length === 0 ? "ยังไม่มีหมุดที่ปักไว้ (กด '+ ปักหมุด' จากการ์ดหรือแผนที่)" : "กรองแสดงเฉพาะจุดที่ปักหมุดไว้"}
+              >
+                <span>📌 {filterOnlyPinned ? "กำลังดูเฉพาะที่ปักหมุด" : "เลือกเฉพาะที่ปักหมุด"}</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${filterOnlyPinned ? "bg-white text-rose-700" : "bg-rose-100 text-rose-800"}`}>
+                  {scoutingList.length}
+                </span>
+              </button>
+
+              {/* Clear pins button */}
+              {scoutingList.length > 0 && (
+                <button
+                  onClick={handleClearScout}
+                  className="btn text-xs px-2.5 py-1 rounded-xl font-black bg-white hover:bg-rose-50 border border-rose-300 text-rose-700 shadow-[2px_2px_0px_#fca5a5] flex items-center gap-1 transition"
+                  title="ล้างหมุดสำรวจทั้งหมด"
+                >
+                  <span>🗑️ ล้างหมุด</span>
+                </button>
+              )}
             </div>
-            <div className="font-mono text-xs sm:text-sm text-[#0284c7] font-black bg-white px-2.5 py-1 rounded-md border border-[#bae6fd]">
-              {displayedLocations.length} โลเคชันที่กำลังแสดง
+
+            <div className="flex items-center gap-2">
+              {filterOnlyPinned && (
+                <button
+                  onClick={() => setFilterOnlyPinned(false)}
+                  className="text-xs text-[#0284c7] hover:underline font-black"
+                >
+                  ← ดูทั้งหมด
+                </button>
+              )}
+              <div className="font-mono text-xs sm:text-sm text-[#0284c7] font-black bg-white px-2.5 py-1 rounded-md border border-[#bae6fd]">
+                {displayedLocations.length} โลเคชัน
+              </div>
             </div>
           </div>
 
@@ -423,19 +500,28 @@ export default function Home() {
             <div className="text-center py-16 bg-white rounded-[22px] border-[2.5px] border-dashed border-[#0284c7] p-8">
               <Clapperboard className="w-12 h-12 text-[#0284c7] mx-auto mb-2 opacity-40" />
               <p className="text-slate-900 font-black text-base">
-                {activeTab === "search" ? "ไม่พบโลเคชันที่ตรงเงื่อนไข" : "ยังไม่มีสถานที่ใน Recce Board"}
+                {filterOnlyPinned 
+                  ? "ยังไม่มีสถานที่ที่ปักหมุดไว้" 
+                  : activeTab === "search" 
+                  ? "ไม่พบโลเคชันที่ตรงเงื่อนไข" 
+                  : "ยังไม่มีสถานที่ใน Recce Board"}
               </p>
               <p className="text-xs font-bold text-slate-500 mt-1 mb-4">
-                {activeTab === "search" 
+                {filterOnlyPinned
+                  ? "กดปุ่ม '+ ปักหมุด' จากการ์ดหรือแผนที่เพื่อเลือกสถานที่เข้าลิสต์"
+                  : activeTab === "search" 
                   ? "ลองปรับเปลี่ยนคำค้นหา หรือเลือกจังหวัดอื่นๆ ดูครับ" 
                   : "กดปุ่ม '+ ปักหมุด' ในหน้าค้นหา เพื่อเพิ่มสถานที่สำหรับออกกอง"}
               </p>
-              {activeTab === "scout" && (
+              {(activeTab === "scout" || filterOnlyPinned) && (
                 <button
-                  onClick={() => setActiveTab("search")}
+                  onClick={() => {
+                    setActiveTab("search");
+                    setFilterOnlyPinned(false);
+                  }}
                   className="btn btn-blue text-xs px-4 py-2 rounded-xl font-black"
                 >
-                  กลับไปค้นหาโลเคชัน
+                  กลับไปค้นหาโลเคชันทั้งหมด
                 </button>
               )}
             </div>
@@ -678,6 +764,13 @@ export default function Home() {
             scoutingList={scoutingList}
             onSelectLocation={handleSelectFromMap}
             onToggleScout={toggleScout}
+            onClearScout={handleClearScout}
+            filterOnlyPinned={filterOnlyPinned}
+            onToggleFilterOnlyPinned={() => {
+              if (scoutingList.length > 0) {
+                setFilterOnlyPinned(!filterOnlyPinned);
+              }
+            }}
           />
         </div>
 
