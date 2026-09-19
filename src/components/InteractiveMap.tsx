@@ -90,9 +90,23 @@ export default function InteractiveMap({
     markersLayerRef.current = L.layerGroup().addTo(map);
     mapInstanceRef.current = map;
 
-    // Deselect when clicking on empty map space (not on a marker or popup)
+    // Capture click on the Leaflet popup "x" close button directly
+    const container = mapContainerRef.current;
+    const handleCloseButtonClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && target.closest(".leaflet-popup-close-button")) {
+        onDeselectRef.current?.();
+      }
+    };
+    container?.addEventListener("click", handleCloseButtonClick, true);
+
+    // Deselect when clicking on empty map space (not on a marker or popup body)
     map.on("click", (e) => {
       const target = e.originalEvent?.target as HTMLElement | null;
+      if (target && target.closest(".leaflet-popup-close-button")) {
+        onDeselectRef.current?.();
+        return;
+      }
       if (target && (target.closest(".custom-teardrop-pin") || target.closest(".leaflet-popup"))) {
         return;
       }
@@ -103,14 +117,15 @@ export default function InteractiveMap({
     map.on("popupclose", () => {
       setTimeout(() => {
         if (!mapInstanceRef.current) return;
-        const hasOpenPopup = !!mapInstanceRef.current.getContainer().querySelector(".leaflet-popup");
-        if (!hasOpenPopup) {
+        const activePopup = (mapInstanceRef.current as any)._popup;
+        if (!activePopup) {
           onDeselectRef.current?.();
         }
-      }, 60);
+      }, 50);
     });
 
     return () => {
+      container?.removeEventListener("click", handleCloseButtonClick, true);
       map.remove();
       mapInstanceRef.current = null;
     };
