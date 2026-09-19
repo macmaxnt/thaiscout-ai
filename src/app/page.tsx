@@ -8,6 +8,8 @@ import {
   Sliders, Layers, ShieldCheck, Route, Eye
 } from "lucide-react";
 
+import RagModal from "@/components/RagModal";
+
 // Dynamic import for Leaflet map (client-only)
 const InteractiveMap = dynamic(() => import("@/components/InteractiveMap"), {
   ssr: false,
@@ -27,6 +29,7 @@ export default function Home() {
   const [results, setResults] = useState<any[]>([]);
   const [scoutingList, setScoutingList] = useState<any[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<any | null>(null);
+  const [ragTargetLocation, setRagTargetLocation] = useState<any | null>(null);
   const [activeTab, setActiveTab] = useState<"search" | "scout">("search");
 
   const sampleBriefs = [
@@ -339,19 +342,33 @@ export default function Home() {
                     </div>
 
                     {/* Footer Actions */}
-                    <div className="pt-2.5 border-t border-slate-200 flex items-center justify-between gap-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSelect(loc);
-                        }}
-                        className={`btn text-xs px-2.5 py-1 rounded-lg font-black flex items-center gap-1 ${
-                          isSelected ? "btn-blue" : "bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200"
-                        }`}
-                      >
-                        <Eye className="w-3 h-3" />
-                        {isSelected ? "กำลังชี้เป้า" : "ดูบนแผนที่"}
-                      </button>
+                    <div className="pt-2.5 border-t border-slate-200 flex items-center justify-between gap-1.5 flex-wrap">
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSelect(loc);
+                          }}
+                          className={`btn text-xs px-2.5 py-1 rounded-lg font-black flex items-center gap-1 ${
+                            isSelected ? "btn-blue" : "bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200"
+                          }`}
+                        >
+                          <Eye className="w-3 h-3" />
+                          {isSelected ? "ชี้เป้า" : "แผนที่"}
+                        </button>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setRagTargetLocation(loc);
+                          }}
+                          className="btn btn-purple text-xs px-2.5 py-1 rounded-lg font-black flex items-center gap-1"
+                          title="เปิด AI RAG วิเคราะห์มุมกล้อง ระเบียบ และถามตอบเจาะลึก"
+                        >
+                          <Sparkles className="w-3 h-3 text-amber-300" />
+                          AI RAG
+                        </button>
+                      </div>
 
                       <button
                         onClick={(e) => {
@@ -387,6 +404,15 @@ export default function Home() {
         </div>
 
       </div>
+
+      {/* 🎙️ AI RAG Production Consultant Modal */}
+      {ragTargetLocation && (
+        <RagModal
+          location={ragTargetLocation}
+          brief={brief}
+          onClose={() => setRagTargetLocation(null)}
+        />
+      )}
     </div>
   );
 }
