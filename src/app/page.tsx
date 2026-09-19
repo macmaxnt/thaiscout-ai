@@ -313,7 +313,7 @@ export default function Home() {
 
             <div>
               <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-                ค้นหาโลเคชันถ่ายทำจาก <span className="text-[#0284c7] underline decoration-wavy">Creative Brief</span>
+                ค้นหาโลเคชันถ่ายทำจาก <span className="text-[#0284c7]">Creative Brief</span>
               </h2>
               <p className="text-xs sm:text-sm font-semibold text-slate-700 mt-1">
                 พิมพ์บรรยากาศหรืออารมณ์ฉากที่ต้องการ หรือ <strong className="text-slate-900">เลือกดูรายภาค/รายจังหวัดแบบไม่ต้องพิมพ์</strong> ระบบจะดึงพิกัดจริงและปักหมุดบนแผนที่ดาวเทียมทันที
@@ -324,7 +324,7 @@ export default function Home() {
             <div className="bg-[#f8fafc] border-2 border-slate-300 rounded-[18px] p-3.5 focus-within:border-[#0284c7] focus-within:shadow-[3px_3px_0px_#0369a1] transition">
               <div className="flex items-center justify-between mb-1.5">
                 <label className="block text-xs font-black text-[#0c4a6e] uppercase font-mono">
-                  ⚡ Director Brief / Mood & Tone (ภาษาคน)
+                  Brief
                 </label>
                 {brief && (
                   <button
