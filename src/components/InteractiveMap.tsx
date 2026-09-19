@@ -73,6 +73,7 @@ export default function InteractiveMap({
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const routePolylineRef = useRef<L.Polyline | null>(null);
   const prevSelectedIdRef = useRef<string | null>(null);
+  const prevLocsLengthRef = useRef<number>(0);
 
   const onDeselectRef = useRef(onDeselect);
   useEffect(() => {
@@ -87,6 +88,7 @@ export default function InteractiveMap({
       center: [13.7367, 100.5231],
       zoom: 6,
       zoomControl: true,
+      preferCanvas: true,
     });
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -115,7 +117,7 @@ export default function InteractiveMap({
         onDeselectRef.current?.();
         return;
       }
-      if (target && (target.closest(".custom-teardrop-pin") || target.closest(".leaflet-popup"))) {
+      if (target && (target.closest(".custom-teardrop-pin") || target.closest(".leaflet-popup") || target.closest(".leaflet-interactive"))) {
         return;
       }
       onDeselectRef.current?.();
@@ -167,6 +169,8 @@ export default function InteractiveMap({
       }).addTo(map);
     }
 
+    const isLargeDataset = validLocs.length > 800;
+
     validLocs.forEach((loc) => {
       const lat = loc.lat!;
       const lng = loc.lng!;
@@ -175,61 +179,6 @@ export default function InteractiveMap({
       const isSelected = selectedLocation?.id === loc.id;
       const recceIndex = scoutingList.findIndex((x) => x.id === loc.id);
       const isRecce = recceIndex !== -1;
-
-      // Pin colors & size
-      const size = isSelected ? 38 : isRecce ? 34 : 30;
-      const bg = isSelected ? "#e11d48" : isRecce ? "#16a34a" : "#7c3aed";
-      const border = isSelected ? "#881337" : isRecce ? "#14532d" : "#4c1d95";
-      const badgeText = isRecce ? `#${recceIndex + 1}` : isSelected ? "★" : "📍";
-
-      // Teardrop pin design with exact anchoring
-      const pinHtml = `
-        <div style="
-          width: ${size}px;
-          height: ${size}px;
-          background: ${bg};
-          border: 2.5px solid ${border};
-          border-radius: 50% 50% 50% 0;
-          transform: rotate(-45deg);
-          box-shadow: ${isSelected ? "3px 3px 0px #000000" : "2px 2px 0px rgba(0,0,0,0.35)"};
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          transition: transform 0.15s ease;
-        ">
-          <span style="
-            transform: rotate(45deg);
-            color: #ffffff;
-            font-family: 'Nunito', 'Mitr', sans-serif;
-            font-weight: 900;
-            font-size: ${isRecce ? "12px" : "11px"};
-            text-align: center;
-            line-height: 1;
-          ">${badgeText}</span>
-        </div>
-      `;
-
-      const marker = L.marker([lat, lng], {
-        icon: L.divIcon({
-          className: "custom-teardrop-pin",
-          html: pinHtml,
-          iconSize: [size, size],
-          iconAnchor: [size / 2, size],
-          popupAnchor: [0, -size - 6],
-        }),
-        zIndexOffset: isSelected ? 1000 : isRecce ? 500 : 100,
-      });
-
-      // Hover Tooltip: Clean & non-intrusive
-      marker.bindTooltip(
-        `<div style="font-family:'Nunito','Mitr',sans-serif; font-weight:800; font-size:11px;">${isRecce ? `[จุดที่ ${recceIndex + 1}] ` : ""}${loc.name_th}</div>`,
-        {
-          direction: "top",
-          offset: [0, -size - 4],
-          opacity: 0.95,
-        }
-      );
 
       // Popup Content: Structured cleanly above the pin with interactive buttons
       const popupDiv = document.createElement("div");
@@ -333,16 +282,87 @@ export default function InteractiveMap({
         });
       }
 
-      marker.bindPopup(popupDiv);
+      if (isLargeDataset && !isSelected && !isRecce) {
+        // High-performance Canvas CircleMarker for unselected pins in massive datasets
+        const circle = L.circleMarker([lat, lng], {
+          radius: 5,
+          color: "#4c1d95",
+          fillColor: "#7c3aed",
+          fillOpacity: 0.85,
+          weight: 1.5,
+        });
+        circle.bindTooltip(
+          `<div style="font-family:'Nunito','Mitr',sans-serif; font-weight:800; font-size:11px;">${loc.name_th}</div>`,
+          { direction: "top", offset: [0, -6], opacity: 0.95 }
+        );
+        circle.bindPopup(popupDiv);
+        circle.on("click", () => {
+          onSelectLocation(loc);
+        });
+        layer.addLayer(circle);
+      } else {
+        // Full Custom Teardrop Pin for selected, recce, or standard datasets
+        const size = isSelected ? 38 : isRecce ? 34 : 30;
+        const bg = isSelected ? "#e11d48" : isRecce ? "#16a34a" : "#7c3aed";
+        const border = isSelected ? "#881337" : isRecce ? "#14532d" : "#4c1d95";
+        const badgeText = isRecce ? `#${recceIndex + 1}` : isSelected ? "★" : "📍";
 
-      marker.on("click", () => {
-        onSelectLocation(loc);
-      });
+        const pinHtml = `
+          <div style="
+            width: ${size}px;
+            height: ${size}px;
+            background: ${bg};
+            border: 2.5px solid ${border};
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            box-shadow: ${isSelected ? "3px 3px 0px #000000" : "2px 2px 0px rgba(0,0,0,0.35)"};
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.15s ease;
+          ">
+            <span style="
+              transform: rotate(45deg);
+              color: #ffffff;
+              font-family: 'Nunito', 'Mitr', sans-serif;
+              font-weight: 900;
+              font-size: ${isRecce ? "12px" : "11px"};
+              text-align: center;
+              line-height: 1;
+            ">${badgeText}</span>
+          </div>
+        `;
 
-      layer.addLayer(marker);
+        const marker = L.marker([lat, lng], {
+          icon: L.divIcon({
+            className: "custom-teardrop-pin",
+            html: pinHtml,
+            iconSize: [size, size],
+            iconAnchor: [size / 2, size],
+            popupAnchor: [0, -size - 6],
+          }),
+          zIndexOffset: isSelected ? 1000 : isRecce ? 500 : 100,
+        });
 
-      if (isSelected) {
-        marker.openPopup();
+        marker.bindTooltip(
+          `<div style="font-family:'Nunito','Mitr',sans-serif; font-weight:800; font-size:11px;">${isRecce ? `[จุดที่ ${recceIndex + 1}] ` : ""}${loc.name_th}</div>`,
+          {
+            direction: "top",
+            offset: [0, -size - 4],
+            opacity: 0.95,
+          }
+        );
+        marker.bindPopup(popupDiv);
+        marker.on("click", () => {
+          onSelectLocation(loc);
+        });
+
+        layer.addLayer(marker);
+
+        if (isSelected) {
+          marker.openPopup();
+        }
       }
     });
 
@@ -350,13 +370,27 @@ export default function InteractiveMap({
     const isNewSelection = selectedLocation && selectedLocation.id !== prevSelectedId;
     prevSelectedIdRef.current = selectedLocation?.id || null;
 
+    const prevLocsLength = prevLocsLengthRef.current;
+    prevLocsLengthRef.current = validLocs.length;
+    const isLocsListChanged = prevLocsLength !== validLocs.length;
+
     if (isNewSelection && selectedLocation?.lat && selectedLocation?.lng) {
       map.flyTo([selectedLocation.lat, selectedLocation.lng], 14, {
         duration: 0.8,
       });
+    } else if (!selectedLocation && isLocsListChanged && bounds.length > 0) {
+      if (bounds.length > 2000) {
+        map.setView([13.7367, 100.5231], 6);
+      } else {
+        map.fitBounds(bounds, { padding: [40, 40], maxZoom: 13 });
+      }
     } else if (!selectedLocation && prevSelectedId !== null && bounds.length > 0) {
       map.closePopup();
-      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 13 });
+      if (bounds.length > 2000) {
+        map.setView([13.7367, 100.5231], 6);
+      } else {
+        map.fitBounds(bounds, { padding: [40, 40], maxZoom: 13 });
+      }
     } else if (!selectedLocation) {
       map.closePopup();
     }

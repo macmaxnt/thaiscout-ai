@@ -39,6 +39,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<"search" | "scout">("search");
   const [totalDbMatches, setTotalDbMatches] = useState<number>(8628);
   const [currentLimit, setCurrentLimit] = useState<number>(400);
+  const [visibleCardCount, setVisibleCardCount] = useState<number>(40);
   const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
   const [customLocations, setCustomLocations] = useState<any[]>([
     {
@@ -245,6 +246,10 @@ export default function Home() {
       cardsTopRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
   }, [mapPinSelectedId]);
+
+  useEffect(() => {
+    setVisibleCardCount(40);
+  }, [brief, province, filterOnlyPinned, activeTab]);
 
   return (
     <div className="min-h-screen py-4 px-3 sm:px-6 w-full flex flex-col gap-4">
@@ -470,7 +475,7 @@ export default function Home() {
                   : `ฐานข้อมูล ททท. ${totalDbMatches.toLocaleString()} พิกัด`}
               </span>
               <div className="font-mono text-xs sm:text-sm text-[#0284c7] font-black bg-[#f0f9ff] px-2.5 py-1 rounded-lg border border-[#bae6fd]">
-                แสดง {displayedLocations.length} โลเคชัน
+                แสดง {displayedLocations.length.toLocaleString()} โลเคชัน
               </div>
             </div>
           </div>
@@ -515,7 +520,7 @@ export default function Home() {
             <>
               <div ref={cardsTopRef} className="scroll-mt-4" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {displayedLocations.map((loc) => {
+                {displayedLocations.slice(0, visibleCardCount).map((loc) => {
                   const isSaved = scoutingList.some((x) => x.id === loc.id);
                   const isSelected = selectedLocation?.id === loc.id;
                   const recceIndex = scoutingList.findIndex((x) => x.id === loc.id);
@@ -738,7 +743,27 @@ export default function Home() {
               })}
             </div>
 
-            {/* Load More Button */}
+            {/* Pagination Controls for Card Grid */}
+            {visibleCardCount < displayedLocations.length && (
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 py-6">
+                <button
+                  type="button"
+                  onClick={() => setVisibleCardCount((prev) => Math.min(prev + 50, displayedLocations.length))}
+                  className="btn btn-blue text-xs sm:text-sm px-6 py-2.5 rounded-xl font-black shadow-[3px_3px_0px_#0369a1] hover:scale-[1.02] active:scale-95 transition"
+                >
+                  + โหลดการ์ดในรายการเพิ่มอีก (+50) (แสดงแล้ว {Math.min(visibleCardCount, displayedLocations.length).toLocaleString()} จาก {displayedLocations.length.toLocaleString()} แห่ง)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVisibleCardCount(displayedLocations.length)}
+                  className="btn bg-white border-2 border-slate-300 hover:border-slate-400 text-slate-700 hover:bg-slate-50 text-xs px-4 py-2.5 rounded-xl font-bold transition shadow-xs"
+                >
+                  แสดงการ์ดทั้งหมด ({displayedLocations.length.toLocaleString()})
+                </button>
+              </div>
+            )}
+
+            {/* Load More Button (API) */}
             {displayedLocations.length < totalDbMatches && activeTab === "search" && !filterOnlyPinned && (
               <div className="text-center py-6">
                 <button

@@ -115,37 +115,12 @@ export async function POST(req: Request) {
 
     if (isBriefEmpty && !effectiveProvince && !isRegionFilter) {
       // Nationwide browsing without brief:
-      // Evenly sample across ALL 77 provinces so pins cover the entire country from North to South!
-      const byProvince: Record<string, typeof scored> = {};
-      for (const s of validMatches) {
-        const prov = s.item.province || "อื่นๆ";
-        if (!byProvince[prov]) byProvince[prov] = [];
-        byProvince[prov].push(s);
-      }
-
-      // Sort each province's items by score
-      for (const prov of Object.keys(byProvince)) {
-        byProvince[prov].sort((a, b) => b.score - a.score);
-      }
-
-      const targetCount = limit || 400;
-      const provKeys = Object.keys(byProvince);
-      const rounds = Math.ceil(targetCount / Math.max(provKeys.length, 1));
-
-      for (let round = 0; round < rounds; round++) {
-        for (const prov of provKeys) {
-          if (byProvince[prov][round]) {
-            selectedItems.push(byProvince[prov][round]);
-            if (selectedItems.length >= targetCount) break;
-          }
-        }
-        if (selectedItems.length >= targetCount) break;
-      }
+      // Return ALL valid locations across Thailand (all 8,578+ locations)!
+      selectedItems = validMatches;
     } else {
       // Province, Region, or Keyword Search:
-      // If province is selected, return ALL locations for that province!
       validMatches.sort((a, b) => b.score - a.score);
-      const targetLimit = limit || (effectiveProvince ? 1000 : isRegionFilter ? 600 : 150);
+      const targetLimit = limit || (effectiveProvince ? 1000 : isRegionFilter ? 800 : 300);
       selectedItems = validMatches.slice(0, targetLimit);
     }
 
@@ -153,6 +128,7 @@ export async function POST(req: Request) {
       const item = s.item;
       return {
         ...item,
+        detail: item.detail ? item.detail.slice(0, 300) : "",
         relevanceScore: Math.min(Math.round(s.score * 2), 99),
         hasVerifiedCoords: !!(item.lat && item.lng),
         hasOperatingHours: !!item.time,
