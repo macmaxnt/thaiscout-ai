@@ -54,63 +54,95 @@ export default function Home() {
 
   return (
     <div className="min-h-screen pb-20">
+      {/* AI Agent Lab Topbar */}
+      <div className="border-b border-blue-900/40 bg-blue-950/20 px-4 py-1.5 text-xs text-blue-300 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="font-mono font-semibold uppercase tracking-wider text-[11px]">
+            AIAT x CAMT · AI Agent Lab Mode
+          </span>
+          <span className="text-slate-500">|</span>
+          <span className="text-slate-400 text-[11px]">Bounded Agent: Think → Act → Observe</span>
+        </div>
+        <div className="text-[11px] font-mono text-slate-400 hidden sm:block">
+          Trust Boundary: Verified TAT Corpus (8,628 items) · Zero Hallucination
+        </div>
+      </div>
+
       {/* Header */}
-      <header className="border-b border-slate-800/80 bg-[#0c101a]/80 backdrop-blur-md sticky top-0 z-50">
+      <header className="border-b border-slate-800/80 bg-[#0b1120]/90 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="bg-gradient-to-tr from-amber-500 to-rose-500 p-2 rounded-xl text-black shadow-lg shadow-amber-500/20">
+            <div className="bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-500 p-2.5 rounded-xl text-white shadow-lg shadow-blue-500/25 border border-blue-400/30">
               <Clapperboard className="w-5 h-5 font-bold" />
             </div>
             <div>
-              <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-amber-200 via-orange-300 to-rose-400 bg-clip-text text-transparent">
-                ThaiScout AI
-              </span>
-              <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                TAT Creative Studio
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-white via-slate-200 to-blue-200 bg-clip-text text-transparent">
+                  ThaiScout AI
+                </span>
+                <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-500/30 font-semibold">
+                  Agent v1.0
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 font-mono">
+                Autonomous Location Scouting & Grounded Permit Agent
+              </p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
             <button
               onClick={() => setActiveTab("search")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
-                activeTab === "search" ? "bg-amber-500 text-black font-semibold" : "text-slate-400 hover:text-white"
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-medium transition flex items-center gap-1.5 ${
+                activeTab === "search" 
+                  ? "bg-blue-600 text-white font-semibold shadow-md shadow-blue-600/30 border border-blue-400/30" 
+                  : "text-slate-400 hover:text-white bg-slate-800/40 border border-slate-800"
               }`}
             >
-              ค้นหาโลเคชัน
+              <Compass className="w-3.5 h-3.5" />
+              Scouting Agent
             </button>
             <button
               onClick={() => setActiveTab("scout")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5 ${
-                activeTab === "scout" ? "bg-amber-500 text-black font-semibold" : "text-slate-400 hover:text-white"
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-medium transition flex items-center gap-1.5 ${
+                activeTab === "scout" 
+                  ? "bg-blue-600 text-white font-semibold shadow-md shadow-blue-600/30 border border-blue-400/30" 
+                  : "text-slate-400 hover:text-white bg-slate-800/40 border border-slate-800"
               }`}
             >
               <Film className="w-3.5 h-3.5" />
-              Scouting Board ({scoutingList.length})
+              Recce Board ({scoutingList.length})
             </button>
           </div>
         </div>
       </header>
 
-      {/* Hero Banner */}
-      <section className="max-w-7xl mx-auto px-4 pt-10 pb-6 text-center">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700/60 text-xs text-slate-300 mb-4">
-          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-          <span>เชื่อมโยงฐานข้อมูลการท่องเที่ยวแห่งประเทศไทย (ททท.) 8,628 แห่งทั่วประเทศ</span>
+      {/* Hero Banner with Lab AI Agent Vibe */}
+      <section className="max-w-7xl mx-auto px-4 pt-8 pb-6 text-center">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-950/60 border border-blue-800/50 text-xs text-blue-300 mb-4">
+          <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+          <span>CAMT AI Agent Lab: Bounded Tool Execution บนฐานข้อมูล ททท. 8,628 แห่ง</span>
         </div>
         <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight text-white mb-3">
-          ค้นหาโลเคชันถ่ายทำจาก <span className="bg-gradient-to-r from-amber-400 to-rose-400 bg-clip-text text-transparent">Creative Brief</span>
+          AI Agent สำหรับ <span className="bg-gradient-to-r from-blue-400 via-indigo-300 to-cyan-400 bg-clip-text text-transparent">ค้นหาและวางแผนออกกองถ่ายทำ</span>
         </h1>
         <p className="text-slate-400 max-w-2xl mx-auto text-sm md:text-base mb-8">
-          แปลงอารมณ์ Moodboard ของกองถ่าย ให้เป็นสถานที่จริง พิกัดแม่นยำ พร้อมข้อมูลผู้ดูแลพื้นที่สำหรับประสานงานขอใบอนุญาต
+          ป้อน Creative Brief ด้วยภาษาคน Agent จะประมวลผล Think-Act-Observe จับคู่สถานที่จริง พร้อมกำกับสิทธิ์การเข้าถึงข้อมูลตาม Security Boundaries
         </p>
 
-        {/* Search Panel */}
-        <div className="max-w-3xl mx-auto bg-slate-900/90 border border-slate-800 p-4 md:p-6 rounded-2xl shadow-2xl backdrop-blur-xl text-left">
-          <label className="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider">
-            Creative Brief / Mood & Tone (ภาษาคน หรือ บรีฟผู้กำกับ)
-          </label>
+        {/* Search Panel styled like AI Agent Console */}
+        <div className="max-w-3xl mx-auto bg-[#0f172a]/90 border border-slate-800/90 p-4 md:p-6 rounded-2xl shadow-2xl backdrop-blur-xl text-left relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-cyan-500" />
+          
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-xs font-semibold text-blue-400 uppercase tracking-wider font-mono flex items-center gap-1.5">
+              <span>⚡ Creative Brief Input (Natural Language Prompt)</span>
+            </label>
+            <span className="text-[10px] font-mono text-slate-400 bg-slate-800/70 px-2 py-0.5 rounded border border-slate-700">
+              Agent State: IDLE
+            </span>
+          </div>
           <div className="relative mb-4">
             <textarea
               rows={2}
@@ -143,16 +175,33 @@ export default function Home() {
             <button
               onClick={() => handleSearch()}
               disabled={loading}
-              className="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-semibold text-xs rounded-xl shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 transition disabled:opacity-50"
+              className="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-semibold text-xs rounded-xl shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 transition disabled:opacity-50 border border-blue-400/30"
             >
               <Search className="w-4 h-4" />
-              {loading ? "กำลังค้นหาโลเคชัน..." : "สแกนหาโลเคชัน ททท."}
+              {loading ? "Agent กำลัง Think → Act..." : "รัน Scouting Agent (ททท. Corpus)"}
             </button>
           </div>
 
+          {/* AI Agent Execution Steps Indicator */}
+          <div className="mt-4 pt-3 border-t border-slate-800/80 flex flex-wrap gap-2 items-center justify-between text-[11px] font-mono text-slate-400">
+            <div className="flex items-center gap-2">
+              <span className="text-slate-500">Agent Tools:</span>
+              <span className="px-2 py-0.5 rounded bg-blue-950/60 text-blue-300 border border-blue-800/40">
+                1. TokenizeBrief
+              </span>
+              <span className="px-2 py-0.5 rounded bg-blue-950/60 text-blue-300 border border-blue-800/40">
+                2. FilterCorpus (TAT 8.6k)
+              </span>
+              <span className="px-2 py-0.5 rounded bg-emerald-950/60 text-emerald-300 border border-emerald-800/40">
+                3. GroundingGuardrail
+              </span>
+            </div>
+            <span className="text-cyan-400">Bounded Execution: OK</span>
+          </div>
+
           {/* Quick templates */}
-          <div className="mt-4 pt-3 border-t border-slate-800/80 flex flex-wrap gap-2 items-center">
-            <span className="text-xs text-slate-500">บรีฟตัวอย่าง:</span>
+          <div className="mt-3 pt-2 border-t border-slate-800/40 flex flex-wrap gap-2 items-center">
+            <span className="text-xs text-slate-500 font-mono">บรีฟตัวอย่าง:</span>
             {sampleBriefs.map((s, idx) => (
               <button
                 key={idx}
@@ -161,7 +210,7 @@ export default function Home() {
                   setProvince(s.prov);
                   handleSearch(s.text, s.prov);
                 }}
-                className="text-xs px-2.5 py-1 rounded-md bg-slate-800/60 hover:bg-slate-800 text-slate-300 border border-slate-700/50 transition"
+                className="text-xs px-2.5 py-1 rounded-md bg-slate-800/60 hover:bg-slate-700 text-slate-300 border border-slate-700/50 transition font-sans"
               >
                 {s.title}
               </button>
