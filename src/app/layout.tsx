@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "AIAT x CAMT · ThaiScout AI Lab",
+  title: "ThaiScout AI Lab",
   description: "ระบบค้นหาโลเคชันถ่ายทำ และข้อมูลติดต่อขอใบอนุญาตสำหรับกองถ่าย ครีเอเตอร์ จากฐานข้อมูล ททท.",
 };
 

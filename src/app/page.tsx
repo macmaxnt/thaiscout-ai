@@ -31,6 +31,12 @@ export default function Home() {
   const [selectedLocation, setSelectedLocation] = useState<any | null>(null);
   const [ragTargetLocation, setRagTargetLocation] = useState<any | null>(null);
   const [activeTab, setActiveTab] = useState<"search" | "scout">("search");
+  const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
+
+  const toggleExpand = (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setExpandedIds((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
 
   const sampleBriefs = [
     { title: "🎬 MV น้ำตกลึกลับ", text: "น้ำตก ลำธาร โขดหิน บรรยากาศลึกลับ ถ่าย MV เพลงเศร้า", prov: "เชียงใหม่" },
@@ -90,7 +96,7 @@ export default function Home() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-base sm:text-lg font-black text-[#4c1d95] tracking-tight leading-tight">
-                AIAT x CAMT · ThaiScout AI Lab
+                ThaiScout AI Lab
               </h1>
               <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-[#fef08a] border border-[#d97706] text-[#78350f]">
                 Track 1
@@ -310,12 +316,27 @@ export default function Home() {
                         📍 {loc.province} {loc.district ? `• อ.${loc.district}` : ""}
                       </p>
 
-                      {loc.hilight ? (
-                        <div className="text-[11px] bg-[#f5f3ff] border border-[#ddd6fe] p-2 rounded-lg text-[#4c1d95] font-bold mb-2.5 line-clamp-2">
+                      {loc.hilight && (
+                        <div className="text-[11px] bg-[#f5f3ff] border border-[#ddd6fe] p-2 rounded-lg text-[#4c1d95] font-bold mb-2">
                           ✨ <strong>จุดเด่น:</strong> {loc.hilight}
                         </div>
-                      ) : (
-                        <p className="text-[11px] text-slate-600 line-clamp-2 mb-2.5 font-medium">{loc.detail}</p>
+                      )}
+
+                      {loc.detail && (
+                        <div className="mb-2.5 bg-slate-50 border border-slate-200/80 p-2 rounded-lg">
+                          <p className={`text-[11px] text-slate-700 font-medium leading-relaxed ${expandedIds[loc.id] ? "" : "line-clamp-2"}`}>
+                            {loc.detail}
+                          </p>
+                          {loc.detail.length > 80 && (
+                            <button
+                              type="button"
+                              onClick={(e) => toggleExpand(loc.id, e)}
+                              className="text-[10px] font-bold text-[#7c3aed] hover:text-[#5b21b6] hover:underline mt-1 inline-flex items-center gap-0.5 cursor-pointer"
+                            >
+                              {expandedIds[loc.id] ? "« ย่อข้อความ" : "อ่านต่อเต็มๆ »"}
+                            </button>
+                          )}
+                        </div>
                       )}
 
                       {/* Technical Specs */}
